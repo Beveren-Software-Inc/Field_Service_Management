@@ -273,11 +273,13 @@ export function AppointmentDetailSheet({
           )}
         </div>
 
-        <div className="mt-6">
-          <Button className="w-full" onClick={() => setReallocateOpen(true)}>
-            Re-allocate
-          </Button>
-        </div>
+        {appointment.status !== "Completed" && (
+          <div className="mt-6">
+            <Button className="w-full" onClick={() => setReallocateOpen(true)}>
+              Re-allocate
+            </Button>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
 

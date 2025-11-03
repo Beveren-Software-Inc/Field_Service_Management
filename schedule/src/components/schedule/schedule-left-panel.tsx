@@ -308,16 +308,22 @@ export function ScheduleLeftPanel({
             {!loading &&
               appointments.map((appointment) => {
                 const isSelected = selectedAppointments.includes(appointment.name);
+                const isCompleted = appointment.status === "Completed";
                 return (
                   <div
                     key={appointment.name}
                     className={`
                       group relative p-3 border rounded-md cursor-pointer transition-colors
                       ${isSelected ? "bg-primary/5 border-primary" : "hover:bg-muted/50"}
+                      ${isCompleted ? "opacity-80" : ""}
                     `}
                     onClick={() => handleAppointmentClick(appointment)}
-                    draggable
+                    draggable={!isCompleted}
                     onDragStart={(e) => {
+                      if (isCompleted) {
+                        e.preventDefault();
+                        return;
+                      }
                       // Package minimal data for drop target: id, duration, current start
                       const start = appointment.scheduled_start_datetime
                         ? new Date(appointment.scheduled_start_datetime).toISOString()
@@ -339,6 +345,7 @@ export function ScheduleLeftPanel({
                     <div className="flex items-start gap-3">
                       <Checkbox
                         checked={isSelected}
+                        disabled={isCompleted}
                         onCheckedChange={(checked) =>
                           onAppointmentSelect(appointment.name, checked as boolean)
                         }
