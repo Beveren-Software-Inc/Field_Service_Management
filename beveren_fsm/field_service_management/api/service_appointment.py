@@ -205,6 +205,7 @@ def get_invoices_for_appointment(appointment_name: str, service_order: str | Non
 
 	results = []
 	results.extend(query_for("Service Appointment", appointment_name))
+
 	if service_order:
 		results.extend(query_for("Service Order", service_order))
 

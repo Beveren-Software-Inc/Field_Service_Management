@@ -158,6 +158,7 @@ export interface InvoiceSummary {
   custom_reference_service_document?: string;
 }
 
+
 export interface CreateAppointmentItem {
   item_code: string;
   qty: number;
