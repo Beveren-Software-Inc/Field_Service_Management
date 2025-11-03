@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Appointment } from "../../pages/schedule/types";
 import { fetchTechnicians, reallocateAppointment } from "../../hooks/use-appointments";
 import { toast } from "../ui/use-toast";
-import { format, startOfDay } from "date-fns";
+import { format, startOfDay, parse } from "date-fns";
 import { cn } from "../../lib/utils";
 
 interface GanttViewProps {
@@ -22,8 +22,8 @@ interface Technician {
 }
 
 const ALL_HOURS = Array.from({ length: 24 }, (_, i) => i); // 0-23
-const DEFAULT_START_HOUR = 6; // 6am
-const DEFAULT_END_HOUR = 18; // 6pm
+const DEFAULT_START_HOUR = 8; // 6am
+const DEFAULT_END_HOUR = 20; // 6pm
 
 const TECHNICIAN_ROW_HEIGHT = 60; // Fixed height per technician row (compact, shows 2 arrows worth)
 
@@ -53,6 +53,16 @@ export function GanttView({
     }
   };
 
+  // Parse backend datetime as local to avoid timezone drift
+  const parseLocalDateTime = (value: string): Date => {
+    try {
+      const normalized = value.replace("T", " ").slice(0, 19);
+      return parse(normalized, "yyyy-MM-dd HH:mm:ss", new Date());
+    } catch {
+      return new Date(value);
+    }
+  };
+
   // Filter technicians by search
   const filteredTechnicians = useMemo(() => {
     if (!technicianSearch.trim()) return technicians;
@@ -64,14 +74,14 @@ export function GanttView({
     );
   }, [technicians, technicianSearch]);
 
-  // Filter appointments for the selected date
+  // Filter appointments for the selected date (parse as local to avoid TZ drift)
   const appointmentsForSelectedDate = useMemo(() => {
     const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
 
     return appointments.filter((apt) => {
       if (!apt.scheduled_start_datetime) return false;
 
-      const appointmentDate = new Date(apt.scheduled_start_datetime);
+      const appointmentDate = parseLocalDateTime(apt.scheduled_start_datetime);
       const appointmentDateStr = format(appointmentDate, "yyyy-MM-dd");
 
       return appointmentDateStr === selectedDateStr;
@@ -159,6 +169,8 @@ export function GanttView({
     return `${y}-${m}-${d} ${hh}:${mm}:00`;
   };
 
+
+
   const handleDropOnTech = async (e: React.DragEvent, tech: Technician) => {
     try {
       e.preventDefault();
@@ -200,6 +212,31 @@ export function GanttView({
       toast({ title: "Schedule Conflict", description: message, variant: message.toLowerCase().includes("overlap") ? "warning" : "destructive" });
     }
   };
+
+  // Current time indicator position
+  const showNowLine = useMemo(() => {
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+    const selectedStr = format(selectedDate, "yyyy-MM-dd");
+    return todayStr === selectedStr;
+  }, [selectedDate]);
+
+  const nowLeftPx = useMemo(() => {
+    if (!showNowLine) return null as number | null;
+    const now = new Date();
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    const visibleStartMinutes = visibleStartHour * 60;
+    const adjusted = minutes - visibleStartMinutes;
+    const leftPx = adjusted * (hourColumnWidth / 60);
+    // Debug: current time and computed pixel position
+    // eslint-disable-next-line no-console
+    console.log(
+      "[Gantt] Now:", now.toISOString(),
+      "| HH:mm:", `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
+      "| visibleStartHour:", visibleStartHour,
+      "| leftPx:", leftPx
+    );
+    return leftPx;
+  }, [showNowLine, visibleStartHour]);
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -281,6 +318,13 @@ export function GanttView({
 
             {/* Technician Rows with Appointments */}
             <div className="relative">
+                {/* Current time vertical line */}
+                {showNowLine && nowLeftPx !== null && (
+                  <div
+                    className="absolute top-0 bottom-0 z-10 border-r border-dashed"
+                    style={{ left: `${nowLeftPx}px`, borderColor: "rgba(255, 165, 0, 0.9)" }}
+                  />
+                )}
               {techniciansWithAppointments.map((tech) => {
                 const techAppointments = getAppointmentsForTechnician(tech.name);
 
@@ -317,8 +361,10 @@ export function GanttView({
                       }
 
                       // Check if appointment is in visible range
-                      const appointmentStartHour = new Date(appointment.scheduled_start_datetime).getHours();
-                      const appointmentEndHour = new Date(appointment.scheduled_finish_datetime).getHours();
+                      const startDt = parseLocalDateTime(appointment.scheduled_start_datetime);
+                      const endDt = parseLocalDateTime(appointment.scheduled_finish_datetime);
+                      const appointmentStartHour = startDt.getHours();
+                      const appointmentEndHour = endDt.getHours();
 
                       // Skip if appointment is completely outside visible range
                       if (
@@ -340,19 +386,13 @@ export function GanttView({
                       const statusColor =
                         statusColors[appointment.status] || "bg-gray-500";
 
-                      const startTime = format(
-                        new Date(appointment.scheduled_start_datetime),
-                        "HH:mm"
-                      );
-                      const endTime = format(
-                        new Date(appointment.scheduled_finish_datetime),
-                        "HH:mm"
-                      );
+                      const startTime = format(startDt, "HH:mm");
+                      const endTime = format(endDt, "HH:mm");
 
                       // Calculate position relative to visible hours
                       const dayStart = startOfDay(selectedDate);
-                      const appointmentStart = new Date(appointment.scheduled_start_datetime);
-                      const appointmentEnd = new Date(appointment.scheduled_finish_datetime);
+                      const appointmentStart = startDt;
+                      const appointmentEnd = endDt;
 
                       const startMinutes = (appointmentStart.getTime() - dayStart.getTime()) / (1000 * 60);
                       const endMinutes = (appointmentEnd.getTime() - dayStart.getTime()) / (1000 * 60);

@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "../ui/input";
 import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
-import { fetchTechnicians, reallocateAppointment } from "../../hooks/use-appointments";
+import { fetchTechnicians, reallocateAppointment, fetchPaidInvoicesForAppointment, InvoiceSummary } from "../../hooks/use-appointments";
 import { useToast } from "../ui/use-toast";
 
 interface AppointmentDetailSheetProps {
@@ -68,12 +68,17 @@ export function AppointmentDetailSheet({
   );
   const [startValue, setStartValue] = useState<string>(isoToDateTimeLocal(appointment.scheduled_start_datetime));
   const [finishValue, setFinishValue] = useState<string>(isoToDateTimeLocal(appointment.scheduled_finish_datetime));
+  const [invoices, setInvoices] = useState<InvoiceSummary[]>([]);
 
   useEffect(() => {
     // refresh values if appointment changes
     setSelectedTechIds((appointment.service_technicians || []).map((t) => t.service_technician));
     setStartValue(isoToDateTimeLocal(appointment.scheduled_start_datetime));
     setFinishValue(isoToDateTimeLocal(appointment.scheduled_finish_datetime));
+    // load invoices
+    fetchPaidInvoicesForAppointment(appointment.name, appointment.service_order)
+      .then(setInvoices)
+      .catch(() => setInvoices([]));
   }, [appointment]);
 
   useEffect(() => {
@@ -271,6 +276,21 @@ export function AppointmentDetailSheet({
               <p className="text-sm text-muted-foreground">{appointment.description}</p>
             </div>
           )}
+
+        {/* Billing */}
+        {invoices && invoices.length > 0 && (
+          <div>
+            <h3 className="text-sm font-semibold mb-3">Billing</h3>
+            <div className="space-y-2 text-sm">
+              {invoices.map((inv) => (
+                <div key={inv.name} className="flex justify-between items-center p-2 bg-muted rounded">
+                  <span className="font-medium">{inv.name}</span>
+                  <Badge variant={inv.status === "Paid" ? "outline" : "secondary"}>{inv.status}</Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         </div>
 
         {appointment.status !== "Completed" && (

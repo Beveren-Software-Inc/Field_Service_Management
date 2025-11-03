@@ -150,6 +150,46 @@ export async function fetchTechnicians(): Promise<any[]> {
   }
 }
 
+export interface InvoiceSummary {
+  name: string;
+  status: string;
+  docstatus: number;
+  custom_reference_service_doctype?: string;
+  custom_reference_service_document?: string;
+}
+
+export async function fetchPaidInvoicesForAppointment(
+  appointmentName: string,
+  serviceOrder?: string
+): Promise<InvoiceSummary[]> {
+  try {
+    //eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const csrfToken = (window as any).csrf_token;
+    const params = new URLSearchParams();
+    params.append("appointment_name", appointmentName);
+    if (serviceOrder) params.append("service_order", serviceOrder);
+    params.append("paid_only", "1");
+
+    const resp = await fetch(
+      `/api/method/beveren_fsm.field_service_management.api.service_appointment.get_invoices_for_appointment?${params.toString()}`,
+      {
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-Frappe-CSRF-Token": csrfToken,
+        },
+        credentials: "include",
+      }
+    );
+    if (!resp.ok) return [];
+    const json = await resp.json();
+    return (json.message || []) as InvoiceSummary[];
+  } catch (error) {
+    console.error("Error fetching invoices for appointment:", error);
+    return [];
+  }
+}
+
 export async function bulkAssignTechnicians(
   appointmentIds: string[],
   technicianIds: string[]

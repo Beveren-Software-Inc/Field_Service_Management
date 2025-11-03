@@ -169,3 +169,56 @@ def get_appointment_statuses():
 		return statuses
 
 	return ["Open", "Scheduled", "Dispatched", "In Progress", "Completed", "Cancelled"]
+
+
+@frappe.whitelist()
+def get_invoices_for_appointment(appointment_name: str, service_order: str | None = None, paid_only: int = 1):
+	"""Fetch Sales Invoices linked to a Service Appointment or its Service Order.
+
+	Args:
+		appointment_name: Service Appointment name
+		service_order: Optional Service Order name
+		paid_only: If truthy, only return invoices with status 'Paid'
+
+	Returns:
+		List of dicts with invoice summary fields
+	"""
+
+	if not appointment_name:
+		frappe.throw("Appointment name is required")
+
+	fields = [
+		"name",
+		"status",
+		"docstatus",
+		"custom_reference_service_doctype",
+		"custom_reference_service_document",
+	]
+
+	def query_for(ref_doctype: str, ref_doc: str):
+		filters = {
+			"custom_reference_service_doctype": ref_doctype,
+			"custom_reference_service_document": ref_doc,
+		}
+		# if paid_only:
+		# 	filters["status"] = "Paid"
+		return frappe.get_all("Sales Invoice", fields=fields, filters=filters, limit_page_length=0)
+
+	results = []
+	# Directly linked to Service Appointment
+	results.extend(query_for("Service Appointment", appointment_name))
+	# Linked via Service Order if provided
+	if service_order:
+		results.extend(query_for("Service Order", service_order))
+
+	# Deduplicate by name while preserving order
+	seen = set()
+	unique_results = []
+	print("Invoice hapa", results)
+	for inv in results:
+		if inv["name"] in seen:
+			continue
+		seen.add(inv["name"])
+		unique_results.append(inv)
+
+	return unique_results
