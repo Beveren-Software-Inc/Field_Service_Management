@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "../ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Appointment } from "../../pages/schedule/types";
-import { fetchTechnicians, reallocateAppointment } from "../../hooks/use-appointments";
+import { fetchTechnicians, reallocateAppointment, createAppointment, fetchServiceOrders, fetchServiceTypes, fetchItems } from "../../hooks/use-appointments";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { toast } from "../ui/use-toast";
 import { format, startOfDay, parse } from "date-fns";
 import { cn } from "../../lib/utils";
@@ -37,6 +38,39 @@ export function GanttView({
   const [loading, setLoading] = useState(true);
   const [visibleStartHour, setVisibleStartHour] = useState(DEFAULT_START_HOUR);
   const [visibleEndHour, setVisibleEndHour] = useState(DEFAULT_END_HOUR);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createStart, setCreateStart] = useState<Date | null>(null);
+  const [createFinish, setCreateFinish] = useState<Date | null>(null);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createCustomer, setCreateCustomer] = useState("");
+  const [createServiceOrder, setCreateServiceOrder] = useState("");
+  const [createServiceType, setCreateServiceType] = useState("");
+  const [createTechnicianIds, setCreateTechnicianIds] = useState<string[]>([]);
+  const [createItems, setCreateItems] = useState<Array<{ item_code: string; qty: number; rate: number }>>([]);
+  const [optionsServiceOrders, setOptionsServiceOrders] = useState<Array<{name: string; customer?: string; type?: string}>>([]);
+  const [optionsServiceTypes, setOptionsServiceTypes] = useState<Array<{name: string}>>([]);
+  const [optionsItems, setOptionsItems] = useState<Array<{name: string; item_name?: string; standard_rate?: number}>>([]);
+
+  useEffect(() => {
+    // Load master data for create modal
+    Promise.all([fetchServiceOrders(), fetchServiceTypes(), fetchItems()])
+      .then(([so, st, it]) => {
+        setOptionsServiceOrders(so);
+        setOptionsServiceTypes(st);
+        setOptionsItems(it);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Auto-fill customer (and service type if present on SO) when selecting Service Order
+  useEffect(() => {
+    if (!createServiceOrder) return;
+    const so = optionsServiceOrders.find((o) => o.name === createServiceOrder);
+    if (so) {
+      if (so.customer) setCreateCustomer(so.customer);
+      if (so.type) setCreateServiceType(so.type);
+    }
+  }, [createServiceOrder, optionsServiceOrders]);
 
   useEffect(() => {
     loadTechnicians();
@@ -335,6 +369,22 @@ export function GanttView({
                     style={{ height: `${TECHNICIAN_ROW_HEIGHT}px` }}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => handleDropOnTech(e, tech)}
+                    onDoubleClick={(e) => {
+                      const timeline = timelineRef.current;
+                      if (!timeline) return;
+                      const rect = timeline.getBoundingClientRect();
+                      const x = e.clientX - rect.left;
+                      const minutesFromVisibleStart = Math.max(0, Math.round((x / 80) * 60));
+                      const absoluteMinutes = visibleStartHour * 60 + minutesFromVisibleStart;
+                      const start = new Date(selectedDate);
+                      start.setHours(0, 0, 0, 0);
+                      start.setMinutes(Math.round(absoluteMinutes / 15) * 15);
+                      const finish = new Date(start.getTime() + 60 * 60000);
+                      setCreateStart(start);
+                      setCreateFinish(finish);
+                      setCreateTechnicianIds([tech.name]);
+                      setCreateOpen(true);
+                    }}
                   >
                     {/* Hour Grid Lines - Scaled to fit row height */}
                     <div className="absolute inset-0">
@@ -464,6 +514,160 @@ export function GanttView({
           </div>
         </div>
       </div>
+
+      {/* Create Appointment Dialog */}
+      {createOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 overflow-auto">
+          <div className="bg-white rounded-md shadow-2xl w-full max-w-5xl p-5 border border-border relative">
+            <div className="absolute inset-y-0 left-0 w-[6px] bg-gradient-to-b from-primary/90 to-primary/20 rounded-l" />
+            <div className="absolute inset-x-0 top-0 h-[6px] bg-gradient-to-r from-primary/90 to-primary/20 rounded-t" />
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-base font-semibold">Create Appointment</div>
+              <button className="text-sm" onClick={() => setCreateOpen(false)}>Close</button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-1">
+                <label className="text-xs text-muted-foreground">Service Order</label>
+                <select className="w-full border rounded px-2 py-1 text-sm" value={createServiceOrder} onChange={(e) => setCreateServiceOrder(e.target.value)}>
+                  <option value="">Select Service Order</option>
+                  {optionsServiceOrders.map((so) => (
+                    <option key={so.name} value={so.name}>{so.name}{so.customer ? ` - ${so.customer}` : ''}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="sm:col-span-1">
+                <label className="text-xs text-muted-foreground">Customer</label>
+                <div className="w-full border rounded px-2 py-1 text-sm bg-muted/50">
+                  {createCustomer || "(auto from Service Order)"}
+                </div>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-xs text-muted-foreground">Service Type</label>
+                <select className="w-full border rounded px-2 py-1 text-sm" value={createServiceType} onChange={(e) => setCreateServiceType(e.target.value)}>
+                  <option value="">Select Service Type</option>
+                  {optionsServiceTypes.map((st) => (
+                    <option key={st.name} value={st.name}>{st.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Scheduled Start</label>
+                <input type="datetime-local" className="w-full border rounded px-2 py-1 text-sm" value={createStart ? `${createStart.getFullYear()}-${String(createStart.getMonth()+1).padStart(2,'0')}-${String(createStart.getDate()).padStart(2,'0')}T${String(createStart.getHours()).padStart(2,'0')}:${String(createStart.getMinutes()).padStart(2,'0')}` : ""} onChange={(e) => setCreateStart(new Date(e.target.value))} />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Scheduled Finish</label>
+                <input type="datetime-local" className="w-full border rounded px-2 py-1 text-sm" value={createFinish ? `${createFinish.getFullYear()}-${String(createFinish.getMonth()+1).padStart(2,'0')}-${String(createFinish.getDate()).padStart(2,'0')}T${String(createFinish.getHours()).padStart(2,'0')}:${String(createFinish.getMinutes()).padStart(2,'0')}` : ""} onChange={(e) => setCreateFinish(new Date(e.target.value))} />
+              </div>
+              <div className="sm:col-span-1">
+                <label className="text-xs text-muted-foreground">Technicians</label>
+                <div className="border rounded p-2 max-h-40 overflow-auto space-y-1">
+                  {technicians.map((t) => (
+                    <label key={t.name} className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={createTechnicianIds.includes(t.name)} onChange={(e) => {
+                        setCreateTechnicianIds((prev) => e.target.checked ? Array.from(new Set([...prev, t.name])) : prev.filter((id) => id !== t.name));
+                      }} />
+                      <span>{t.full_name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="sm:col-span-1">
+                <label className="text-xs text-muted-foreground">Items</label>
+                <div className="flex items-center gap-2 mb-2">
+                  <select className="flex-1 border rounded px-2 py-1 text-sm" onChange={(e) => {
+                    const code = e.target.value;
+                    if (!code) return;
+                    const exists = createItems.find((r) => r.item_code === code);
+                    if (exists) return;
+                    const item = optionsItems.find((i) => i.name === code);
+                    setCreateItems((prev) => [...prev, { item_code: code, qty: 1, rate: Number(item?.standard_rate)||0 }]);
+                    e.currentTarget.selectedIndex = 0;
+                  }}>
+                    <option value="">Add Item…</option>
+                    {optionsItems.map((it) => (
+                      <option key={it.name} value={it.name}>{it.item_name || it.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="border rounded">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-1/3">Item</TableHead>
+                        <TableHead className="w-1/6">Qty</TableHead>
+                        <TableHead className="w-1/6">Rate</TableHead>
+                        <TableHead className="w-1/6">Amount</TableHead>
+                        <TableHead className="w-1/6"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {createItems.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-sm text-muted-foreground">No items added</TableCell>
+                        </TableRow>
+                      ) : (
+                        createItems.map((row) => {
+                          const meta = optionsItems.find((i) => i.name === row.item_code);
+                          const amount = (row.qty || 0) * (row.rate || 0);
+                          return (
+                            <TableRow key={row.item_code}>
+                              <TableCell className="text-sm">{meta?.item_name || row.item_code}</TableCell>
+                              <TableCell>
+                                <input type="number" className="w-20 border rounded px-1 py-0.5 text-sm" value={row.qty} onChange={(e) => {
+                                  const v = Number(e.target.value)||0;
+                                  setCreateItems((prev) => prev.map((r) => r.item_code === row.item_code ? { ...r, qty: v } : r));
+                                }} />
+                              </TableCell>
+                              <TableCell>
+                                <input type="number" className="w-24 border rounded px-1 py-0.5 text-sm" value={row.rate} onChange={(e) => {
+                                  const v = Number(e.target.value)||0;
+                                  setCreateItems((prev) => prev.map((r) => r.item_code === row.item_code ? { ...r, rate: v } : r));
+                                }} />
+                              </TableCell>
+                              <TableCell className="text-sm">{amount.toFixed(2)}</TableCell>
+                              <TableCell>
+                                <button className="text-xs text-red-600" onClick={() => setCreateItems((prev) => prev.filter((r) => r.item_code !== row.item_code))}>Remove</button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button className="px-3 py-1 text-sm border rounded" onClick={() => setCreateOpen(false)}>Cancel</button>
+              <button className="px-3 py-1 text-sm bg-primary text-white rounded" disabled={createLoading} onClick={async () => {
+                try {
+                  setCreateLoading(true);
+                  if (!createStart || !createFinish) throw new Error('Start and finish are required');
+                  if (!createCustomer) throw new Error('Customer is required (select a Service Order)');
+                  const techs = createTechnicianIds.map((id) => ({ service_technician: id, full_name: id }));
+                  await createAppointment({
+                    service_order: createServiceOrder || undefined,
+                    customer: createCustomer,
+                    scheduled_start_datetime: toFrappeDateTime(createStart),
+                    scheduled_finish_datetime: toFrappeDateTime(createFinish),
+                    service_technicians: techs,
+                    items: createItems,
+                    changed_status: null,
+                  });
+                  toast({ title: 'Appointment created' });
+                  setCreateOpen(false);
+                  window.location.reload();
+                } catch (err) {
+                  const msg = (err as Error)?.message || 'Failed to create appointment';
+                  toast({ title: 'Error', description: msg, variant: 'destructive' });
+                } finally {
+                  setCreateLoading(false);
+                }
+              }}>Create</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

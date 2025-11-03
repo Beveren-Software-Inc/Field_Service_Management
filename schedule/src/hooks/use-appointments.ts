@@ -158,6 +158,120 @@ export interface InvoiceSummary {
   custom_reference_service_document?: string;
 }
 
+export interface CreateAppointmentItem {
+  item_code: string;
+  qty: number;
+  rate: number;
+  amount?: number;
+}
+
+export interface CreateAppointmentTechnician {
+  service_technician: string;
+  full_name: string;
+}
+
+// Master data fetchers (basic lists)
+//eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function fetchServiceOrders(): Promise<any[]> {
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const csrfToken = (window as any).csrf_token;
+  const url = '/api/resource/Service Order?fields=["name","customer","type"]&limit_page_length=50';
+  const resp = await fetch(url, {
+    headers: { Accept: "application/json", "Content-Type": "application/json", "X-Frappe-CSRF-Token": csrfToken },
+    credentials: "include",
+  });
+  const json = await resp.json();
+  return json.data || [];
+}
+
+//eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function fetchCustomers(): Promise<any[]> {
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const csrfToken = (window as any).csrf_token;
+  const url = '/api/resource/Customer?fields=["name","customer_name"]&limit_page_length=50';
+  const resp = await fetch(url, {
+    headers: { Accept: "application/json", "Content-Type": "application/json", "X-Frappe-CSRF-Token": csrfToken },
+    credentials: "include",
+  });
+  const json = await resp.json();
+  return json.data || [];
+}
+
+//eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function fetchServiceTypes(): Promise<any[]> {
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const csrfToken = (window as any).csrf_token;
+  const url = '/api/resource/Service Type?fields=["name"]&limit_page_length=100';
+  const resp = await fetch(url, {
+    headers: { Accept: "application/json", "Content-Type": "application/json", "X-Frappe-CSRF-Token": csrfToken },
+    credentials: "include",
+  });
+  const json = await resp.json();
+  return json.data || [];
+}
+
+//eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function fetchItems(): Promise<any[]> {
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const csrfToken = (window as any).csrf_token;
+  const url = '/api/resource/Item?fields=["name","item_name","standard_rate"]&limit_page_length=100';
+  const resp = await fetch(url, {
+    headers: { Accept: "application/json", "Content-Type": "application/json", "X-Frappe-CSRF-Token": csrfToken },
+    credentials: "include",
+  });
+  const json = await resp.json();
+  return json.data || [];
+}
+
+export async function createAppointment(params: {
+  posting_date?: string;
+  service_order?: string;
+  customer: string;
+  scheduled_start_datetime: string;
+  scheduled_finish_datetime: string;
+  service_technicians: CreateAppointmentTechnician[];
+  items: CreateAppointmentItem[];
+  changed_status?: string | null;
+}): Promise<string> {
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const csrfToken = (window as any).csrf_token;
+  const payload = {
+    posting_date: params.posting_date || new Date().toISOString().slice(0, 10),
+    service_order: params.service_order || null,
+    customer: params.customer,
+    scheduled_start_datetime: params.scheduled_start_datetime,
+    scheduled_finish_datetime: params.scheduled_finish_datetime,
+    service_technicians: params.service_technicians,
+    items: params.items.map((it) => ({
+      item_code: it.item_code,
+      qty: it.qty,
+      rate: it.rate,
+      amount: it.amount ?? it.qty * it.rate,
+    })),
+    changed_status: params.changed_status ?? null,
+  };
+
+  const resp = await fetch(
+    "/api/method/beveren_fsm.field_service_management.api.schedule.create_appointment_from_api",
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "X-Frappe-CSRF-Token": csrfToken,
+      },
+      body: JSON.stringify(payload),
+      credentials: "include",
+    }
+  );
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Failed to create appointment: ${text}`);
+  }
+  const json = await resp.json();
+  return json.message as string;
+}
+
 export async function fetchPaidInvoicesForAppointment(
   appointmentName: string,
   serviceOrder?: string

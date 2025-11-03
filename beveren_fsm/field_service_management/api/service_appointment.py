@@ -200,21 +200,18 @@ def get_invoices_for_appointment(appointment_name: str, service_order: str | Non
 			"custom_reference_service_doctype": ref_doctype,
 			"custom_reference_service_document": ref_doc,
 		}
-		# if paid_only:
-		# 	filters["status"] = "Paid"
+
 		return frappe.get_all("Sales Invoice", fields=fields, filters=filters, limit_page_length=0)
 
 	results = []
-	# Directly linked to Service Appointment
 	results.extend(query_for("Service Appointment", appointment_name))
-	# Linked via Service Order if provided
 	if service_order:
 		results.extend(query_for("Service Order", service_order))
 
 	# Deduplicate by name while preserving order
 	seen = set()
 	unique_results = []
-	print("Invoice hapa", results)
+
 	for inv in results:
 		if inv["name"] in seen:
 			continue

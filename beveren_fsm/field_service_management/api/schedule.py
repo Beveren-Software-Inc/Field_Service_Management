@@ -1,4 +1,3 @@
-import json
 from datetime import datetime
 
 import frappe
@@ -40,8 +39,6 @@ def create_appointment_from_api(
 				{
 					"service_technician": service_technician["service_technician"],
 					"full_name": service_technician["full_name"],
-					# "service_area": service_technician["service_area"],
-					# "specialization": service_technician["specialization"]
 				},
 			)
 	else:
@@ -50,8 +47,6 @@ def create_appointment_from_api(
 			{
 				"service_technician": service_technicians["service_technician"],
 				"full_name": service_technicians["full_name"],
-				# "service_area": service_technician["service_area"],
-				# "specialization": service_technician["specialization"]
 			},
 		)
 
@@ -76,9 +71,6 @@ def update_appointment_from_api(
 	edit_item_list=False,
 	edit_technician_list=False,
 ):
-	# if all(not flag for flag in (reschedule, edit_item_list, edit_technician_list)) and changed_status is None:
-	# 	return
-
 	if not reschedule and not edit_item_list and not edit_technician_list and changed_status is None:
 		return
 
@@ -106,8 +98,6 @@ def update_appointment_from_api(
 					{
 						"service_technician": service_technician["service_technician"],
 						"full_name": service_technician["full_name"],
-						# "service_area": service_technician["service_area"],
-						# "specialization": service_technician["specialization"]
 					},
 				)
 		else:
@@ -116,8 +106,6 @@ def update_appointment_from_api(
 				{
 					"service_technician": service_technicians["service_technician"],
 					"full_name": service_technicians["full_name"],
-					# "service_area": service_technician["service_area"],
-					# "specialization": service_technician["specialization"]
 				},
 			)
 
@@ -176,7 +164,6 @@ def bulk_assign_technicians(appointment_ids=None, technician_ids=None):
 		appointment_ids (list|str): List of Service Appointment names or JSON string list
 		technician_ids (list|str): List of Service Technician names or JSON string list
 	"""
-	# Extract from form_dict if not provided directly
 	if appointment_ids is None:
 		appointment_ids = frappe.form_dict.get("appointment_ids")
 	if technician_ids is None:
@@ -229,7 +216,6 @@ def bulk_assign_technicians(appointment_ids=None, technician_ids=None):
 			appointment.save()
 			updated.append(name)
 		except Exception as e:
-			# Immediately return on first failure (e.g., overlap)
 			frappe.local.response["http_status_code"] = 417
 			return {
 				"updated": updated,
