@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useEffect, useRef } from "react";
-import { format, parse } from "date-fns";
+import { format, parse, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import { MapPin } from "lucide-react";
 import { Appointment } from "../../pages/schedule/types";
 import L from "leaflet";
@@ -14,15 +14,16 @@ interface MapsViewProps {
   statusFilter?: string;
   technicianSearch?: string;
   searchQuery?: string;
+  durationFilter?: "today" | "thisWeek" | "thisMonth";
 }
 
-const STATUS_COLORS: Record<string, { bg: string; border: string; dot: string; hex: string }> = {
-  Open: { bg: "bg-blue-100", border: "border-blue-300", dot: "bg-blue-500", hex: "#3b82f6" },
-  Scheduled: { bg: "bg-blue-100", border: "border-blue-300", dot: "bg-blue-500", hex: "#3b82f6" },
-  Dispatched: { bg: "bg-orange-100", border: "border-orange-300", dot: "bg-orange-500", hex: "#f97316" },
-  "In Progress": { bg: "bg-orange-100", border: "border-orange-300", dot: "bg-orange-500", hex: "#f97316" },
-  Completed: { bg: "bg-green-100", border: "border-green-300", dot: "bg-green-500", hex: "#22c55e" },
-  Cancelled: { bg: "bg-gray-100", border: "border-gray-300", dot: "bg-gray-400", hex: "#9ca3af" },
+const STATUS_COLORS: Record<string, { bg: string; border: string; dot: string; hex: string; bgHex: string; borderHex: string }> = {
+  Open: { bg: "bg-blue-100", border: "border-blue-300", dot: "bg-blue-500", hex: "#3b82f6", bgHex: "#dbeafe", borderHex: "#93c5fd" },
+  Scheduled: { bg: "bg-blue-100", border: "border-blue-300", dot: "bg-blue-500", hex: "#3b82f6", bgHex: "#dbeafe", borderHex: "#93c5fd" },
+  Dispatched: { bg: "bg-orange-100", border: "border-orange-300", dot: "bg-orange-500", hex: "#f97316", bgHex: "#ffedd5", borderHex: "#fdba74" },
+  "In Progress": { bg: "bg-orange-100", border: "border-orange-300", dot: "bg-orange-500", hex: "#f97316", bgHex: "#ffedd5", borderHex: "#fdba74" },
+  Completed: { bg: "bg-green-100", border: "border-green-300", dot: "bg-green-500", hex: "#22c55e", bgHex: "#dcfce7", borderHex: "#86efac" },
+  Cancelled: { bg: "bg-gray-100", border: "border-gray-300", dot: "bg-gray-400", hex: "#9ca3af", bgHex: "#f3f4f6", borderHex: "#d1d5db" },
 };
 
 // Generate random coordinates for appointments (for demo purposes)
@@ -47,6 +48,16 @@ const generateRandomCoordinates = (appointmentId: string): [number, number] => {
   return [lat, lng];
 };
 
+// Parse local datetime helper function
+const parseLocalDateTime = (value: string): Date => {
+  try {
+    const normalized = value.replace("T", " ").slice(0, 19);
+    return parse(normalized, "yyyy-MM-dd HH:mm:ss", new Date());
+  } catch {
+    return new Date(value);
+  }
+};
+
 // Fix Leaflet default icon issue
 if (typeof window !== "undefined") {
   delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -64,10 +75,38 @@ export function MapsView({
   statusFilter = "all",
   technicianSearch = "",
   searchQuery = "",
+  durationFilter = "thisWeek",
 }: MapsViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
+
+  // Calculate date range based on duration filter
+  const dateRange = useMemo(() => {
+    const today = new Date();
+    switch (durationFilter) {
+      case "today":
+        return {
+          start: startOfDay(today),
+          end: endOfDay(today),
+        };
+      case "thisWeek":
+        return {
+          start: startOfWeek(today, { weekStartsOn: 1 }), // Monday
+          end: endOfWeek(today, { weekStartsOn: 1 }), // Sunday
+        };
+      case "thisMonth":
+        return {
+          start: startOfMonth(today),
+          end: endOfMonth(today),
+        };
+      default:
+        return {
+          start: startOfWeek(today, { weekStartsOn: 1 }),
+          end: endOfWeek(today, { weekStartsOn: 1 }),
+        };
+    }
+  }, [durationFilter]);
 
   // Filter appointments based on props
   const filteredAppointments = useMemo(() => {
@@ -75,6 +114,17 @@ export function MapsView({
       // Status filter
       if (statusFilter && statusFilter !== "all" && apt.status !== statusFilter) {
         return false;
+      }
+
+      // Duration filter - check if appointment scheduled date falls within range
+      if (apt.scheduled_start_datetime || apt.posting_date) {
+        const appointmentDate = apt.scheduled_start_datetime
+          ? parseLocalDateTime(apt.scheduled_start_datetime)
+          : new Date(apt.posting_date);
+
+        if (!isWithinInterval(appointmentDate, { start: dateRange.start, end: dateRange.end })) {
+          return false;
+        }
       }
 
       // Technician search filter
@@ -102,16 +152,7 @@ export function MapsView({
 
       return true;
     });
-  }, [appointments, statusFilter, technicianSearch, searchQuery]);
-
-  const parseLocalDateTime = (value: string): Date => {
-    try {
-      const normalized = value.replace("T", " ").slice(0, 19);
-      return parse(normalized, "yyyy-MM-dd HH:mm:ss", new Date());
-    } catch {
-      return new Date(value);
-    }
-  };
+  }, [appointments, statusFilter, technicianSearch, searchQuery, dateRange]);
 
   // Initialize map
   useEffect(() => {
@@ -159,20 +200,32 @@ export function MapsView({
 
       const marker = L.marker(coordinates, { icon: customIcon }).addTo(map);
 
-      // Create popup content
+      // Create popup content with location name, appointment, and technicians
       const startDateTime = appointment.scheduled_start_datetime
         ? parseLocalDateTime(appointment.scheduled_start_datetime)
         : null;
 
+      const techniciansList = appointment.service_technicians && appointment.service_technicians.length > 0
+        ? appointment.service_technicians.map(t => t.full_name || t.service_technician).join(", ")
+        : "No technicians assigned";
+
+      const locationName = appointment.location || appointment.customer || "Location not specified";
+
       const popupContent = `
-        <div style="min-width: 200px;">
-          <div style="font-weight: 600; margin-bottom: 8px;">
+        <div style="min-width: 250px;">
+          <div style="font-weight: 600; margin-bottom: 8px; font-size: 14px;">
             ${appointment.service_order || appointment.name}
           </div>
-          ${appointment.customer ? `<div style="font-size: 12px; color: #666; margin-bottom: 4px;">${appointment.customer}</div>` : ""}
-          ${startDateTime ? `<div style="font-size: 12px; color: #666; margin-bottom: 4px;">${format(startDateTime, "MMM d, yyyy HH:mm")}</div>` : ""}
+          <div style="font-size: 12px; color: #666; margin-bottom: 6px;">
+            <strong>Location:</strong> ${locationName}
+          </div>
+          ${appointment.customer && appointment.customer !== locationName ? `<div style="font-size: 12px; color: #666; margin-bottom: 6px;"><strong>Customer:</strong> ${appointment.customer}</div>` : ""}
+          ${startDateTime ? `<div style="font-size: 12px; color: #666; margin-bottom: 6px;"><strong>Date:</strong> ${format(startDateTime, "MMM d, yyyy HH:mm")}</div>` : ""}
+          <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
+            <strong>Technicians:</strong> ${techniciansList}
+          </div>
           <div style="margin-top: 8px;">
-            <span style="padding: 2px 8px; border-radius: 4px; font-size: 11px; ${colors.bg.replace('bg-', 'background-color: ')}; ${colors.border.replace('border-', 'border: 1px solid ')};">
+            <span style="padding: 2px 8px; border-radius: 4px; font-size: 11px; background-color: ${colors.bgHex}; border: 1px solid ${colors.borderHex};">
               ${appointment.status}
             </span>
           </div>
