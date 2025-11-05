@@ -62,27 +62,15 @@ export function GanttView({
       .catch(() => {});
   }, []);
 
-  // Filter out service orders that already have appointments (1:1 relationship)
-  const availableServiceOrders = useMemo(() => {
-    // Get all service_order values from existing appointments
-    const usedServiceOrders = new Set(
-      appointments
-        .map((apt) => apt.service_order)
-        .filter((so): so is string => Boolean(so))
-    );
-    // Filter out service orders that already have appointments
-    return optionsServiceOrders.filter((so) => !usedServiceOrders.has(so.name));
-  }, [optionsServiceOrders, appointments]);
-
   // Auto-fill customer (and service type if present on SO) when selecting Service Order
   useEffect(() => {
     if (!createServiceOrder) return;
-    const so = availableServiceOrders.find((o) => o.name === createServiceOrder);
+    const so = optionsServiceOrders.find((o) => o.name === createServiceOrder);
     if (so) {
       if (so.customer) setCreateCustomer(so.customer);
       if (so.type) setCreateServiceType(so.type);
     }
-  }, [createServiceOrder, availableServiceOrders]);
+  }, [createServiceOrder, optionsServiceOrders]);
 
   useEffect(() => {
     loadTechnicians();
@@ -530,7 +518,7 @@ export function GanttView({
       {/* Create Appointment Dialog */}
       {createOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 overflow-auto">
-          <div className="bg-white rounded-md shadow-2xl w-full max-w-5xl p-5 border border-border relative animate-bounce-from-top">
+          <div className="bg-white rounded-md shadow-2xl w-full max-w-5xl p-5 border border-border relative">
             <div className="absolute inset-y-0 left-0 w-[6px] bg-gradient-to-b from-primary/90 to-primary/20 rounded-l" />
             <div className="absolute inset-x-0 top-0 h-[6px] bg-gradient-to-r from-primary/90 to-primary/20 rounded-t" />
             <div className="flex items-center justify-between mb-3">
@@ -540,22 +528,22 @@ export function GanttView({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-1">
                 <label className="text-xs text-muted-foreground">Service Order</label>
-                <select className="w-full border rounded px-2 py-2 text-sm" value={createServiceOrder} onChange={(e) => setCreateServiceOrder(e.target.value)}>
+                <select className="w-full border rounded px-2 py-1 text-sm" value={createServiceOrder} onChange={(e) => setCreateServiceOrder(e.target.value)}>
                   <option value="">Select Service Order</option>
-                  {availableServiceOrders.map((so) => (
+                  {optionsServiceOrders.map((so) => (
                     <option key={so.name} value={so.name}>{so.name}{so.customer ? ` - ${so.customer}` : ''}</option>
                   ))}
                 </select>
               </div>
               <div className="sm:col-span-1">
                 <label className="text-xs text-muted-foreground">Customer</label>
-                <div className="w-full border rounded px-2 py-2 text-sm bg-muted/50">
+                <div className="w-full border rounded px-2 py-1 text-sm bg-muted/50">
                   {createCustomer || "(auto from Service Order)"}
                 </div>
               </div>
               <div className="sm:col-span-2">
                 <label className="text-xs text-muted-foreground">Service Type</label>
-                <select className="w-full border rounded px-2 py-2 text-sm" value={createServiceType} onChange={(e) => setCreateServiceType(e.target.value)}>
+                <select className="w-full border rounded px-2 py-1 text-sm" value={createServiceType} onChange={(e) => setCreateServiceType(e.target.value)}>
                   <option value="">Select Service Type</option>
                   {optionsServiceTypes.map((st) => (
                     <option key={st.name} value={st.name}>{st.name}</option>
@@ -564,11 +552,11 @@ export function GanttView({
               </div>
               <div>
                 <label className="text-xs text-muted-foreground">Scheduled Start</label>
-                <input type="datetime-local" className="w-full border rounded px-2 py-2 text-sm" value={createStart ? `${createStart.getFullYear()}-${String(createStart.getMonth()+1).padStart(2,'0')}-${String(createStart.getDate()).padStart(2,'0')}T${String(createStart.getHours()).padStart(2,'0')}:${String(createStart.getMinutes()).padStart(2,'0')}` : ""} onChange={(e) => setCreateStart(new Date(e.target.value))} />
+                <input type="datetime-local" className="w-full border rounded px-2 py-1 text-sm" value={createStart ? `${createStart.getFullYear()}-${String(createStart.getMonth()+1).padStart(2,'0')}-${String(createStart.getDate()).padStart(2,'0')}T${String(createStart.getHours()).padStart(2,'0')}:${String(createStart.getMinutes()).padStart(2,'0')}` : ""} onChange={(e) => setCreateStart(new Date(e.target.value))} />
               </div>
               <div>
                 <label className="text-xs text-muted-foreground">Scheduled Finish</label>
-                <input type="datetime-local" className="w-full border rounded px-2 py-2 text-sm" value={createFinish ? `${createFinish.getFullYear()}-${String(createFinish.getMonth()+1).padStart(2,'0')}-${String(createFinish.getDate()).padStart(2,'0')}T${String(createFinish.getHours()).padStart(2,'0')}:${String(createFinish.getMinutes()).padStart(2,'0')}` : ""} onChange={(e) => setCreateFinish(new Date(e.target.value))} />
+                <input type="datetime-local" className="w-full border rounded px-2 py-1 text-sm" value={createFinish ? `${createFinish.getFullYear()}-${String(createFinish.getMonth()+1).padStart(2,'0')}-${String(createFinish.getDate()).padStart(2,'0')}T${String(createFinish.getHours()).padStart(2,'0')}:${String(createFinish.getMinutes()).padStart(2,'0')}` : ""} onChange={(e) => setCreateFinish(new Date(e.target.value))} />
               </div>
               <div className="sm:col-span-1">
                 <label className="text-xs text-muted-foreground">Technicians</label>
@@ -586,7 +574,7 @@ export function GanttView({
               <div className="sm:col-span-1">
                 <label className="text-xs text-muted-foreground">Items</label>
                 <div className="flex items-center gap-2 mb-2">
-                  <select className="flex-1 border rounded px-2 py-2 text-sm" onChange={(e) => {
+                  <select className="flex-1 border rounded px-2 py-1 text-sm" onChange={(e) => {
                     const code = e.target.value;
                     if (!code) return;
                     const exists = createItems.find((r) => r.item_code === code);
@@ -625,13 +613,13 @@ export function GanttView({
                             <TableRow key={row.item_code}>
                               <TableCell className="text-sm">{meta?.item_name || row.item_code}</TableCell>
                               <TableCell>
-                                <input type="number" className="w-20 border rounded px-1 py-1 text-sm" value={row.qty} onChange={(e) => {
+                                <input type="number" className="w-20 border rounded px-1 py-0.5 text-sm" value={row.qty} onChange={(e) => {
                                   const v = Number(e.target.value)||0;
                                   setCreateItems((prev) => prev.map((r) => r.item_code === row.item_code ? { ...r, qty: v } : r));
                                 }} />
                               </TableCell>
                               <TableCell>
-                                <input type="number" className="w-24 border rounded px-1 py-1 text-sm" value={row.rate} onChange={(e) => {
+                                <input type="number" className="w-24 border rounded px-1 py-0.5 text-sm" value={row.rate} onChange={(e) => {
                                   const v = Number(e.target.value)||0;
                                   setCreateItems((prev) => prev.map((r) => r.item_code === row.item_code ? { ...r, rate: v } : r));
                                 }} />
