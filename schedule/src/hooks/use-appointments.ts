@@ -158,6 +158,7 @@ export interface InvoiceSummary {
   custom_reference_service_document?: string;
 }
 
+
 export interface CreateAppointmentItem {
   item_code: string;
   qty: number;
@@ -175,14 +176,13 @@ export interface CreateAppointmentTechnician {
 export async function fetchServiceOrders(): Promise<any[]> {
   //eslint-disable-next-line @typescript-eslint/no-explicit-any
   const csrfToken = (window as any).csrf_token;
-  const url = '/api/resource/Service Order?fields=["name","customer","type","status"]&limit_page_length=50';
+  const url = '/api/resource/Service Order?fields=["name","customer","type"]&limit_page_length=50';
   const resp = await fetch(url, {
     headers: { Accept: "application/json", "Content-Type": "application/json", "X-Frappe-CSRF-Token": csrfToken },
     credentials: "include",
   });
   const json = await resp.json();
-  // Filter out service orders with status "Completed"
-  return (json.data || []).filter((so: any) => so.status !== "Completed");
+  return json.data || [];
 }
 
 //eslint-disable-next-line @typescript-eslint/no-explicit-any
