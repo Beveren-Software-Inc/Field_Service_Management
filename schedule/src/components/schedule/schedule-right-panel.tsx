@@ -9,11 +9,13 @@ import {
   PopoverTrigger,
 } from "../ui/popover";
 import { CalendarIcon, BarChart3, Map, Calendar as CalendarIcon2, Search } from "lucide-react";
-import { format, isToday } from "date-fns";
+import { format, isToday, addMonths, subMonths } from "date-fns";
 import { cn } from "../../lib/utils";
 import { Appointment } from "../../pages/schedule/types";
 import { GanttView } from "./gantt-view";
 import { MapsView } from "./maps-view";
+import { CalendarView } from "./calendar-view";
+import { GridView } from "./grid-view";
 import { AppointmentDetailSheet } from "./appointment-detail-sheet";
 import { Input } from "../ui/input";
 
@@ -40,6 +42,7 @@ export function ScheduleRightPanel({
 }: ScheduleRightPanelProps) {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [technicianSearch, setTechnicianSearch] = useState("");
+  const [calendarMonth, setCalendarMonth] = useState(selectedDate);
 
 
   const formatDateDisplay = (date: Date): string => {
@@ -123,63 +126,91 @@ export function ScheduleRightPanel({
       <div className="border-b border-border p-4 bg-card">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleDateNavigation("prev")}
-            >
-              ←
-            </Button>
-            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-              <PopoverTrigger asChild>
+            {viewType === "calendar" ? (
+              <>
                 <Button
                   variant="outline"
-                  className={cn(
-                    "w-auto min-w-[140px] justify-start text-left font-normal px-3",
-                    !selectedDate && "text-muted-foreground"
-                  )}
+                  size="sm"
+                  onClick={() => setCalendarMonth(subMonths(calendarMonth, 1))}
+                  className="h-8 w-8 p-0"
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? (
-                    <span>{formatDateDisplay(selectedDate)}</span>
-                  ) : (
-                    <span>Pick a date</span>
-                  )}
+                  ←
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => {
-                    if (date) {
-                      onDateChange(date);
-                      setDatePickerOpen(false);
-                    }
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleDateNavigation("next")}
-            >
-              →
-            </Button>
+                <h2 className="text-xl font-semibold min-w-[140px]">
+                  {format(calendarMonth, "MMMM yyyy")}
+                </h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))}
+                  className="h-8 w-8 p-0"
+                >
+                  →
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDateNavigation("prev")}
+                >
+                  ←
+                </Button>
+                <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-auto min-w-[140px] justify-start text-left font-normal px-3",
+                        !selectedDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedDate ? (
+                        <span>{formatDateDisplay(selectedDate)}</span>
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          onDateChange(date);
+                          setDatePickerOpen(false);
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDateNavigation("next")}
+                >
+                  →
+                </Button>
+              </>
+            )}
           </div>
 
-          {/* Technician Search - Far Right */}
-          <div className="relative w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search technicians..."
-              value={technicianSearch}
-              onChange={(e) => setTechnicianSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
+          {/* Technician Search - Far Right (hidden in calendar view) */}
+          {viewType !== "calendar" && (
+            <div className="relative w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search technicians..."
+                value={technicianSearch}
+                onChange={(e) => setTechnicianSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -201,14 +232,21 @@ export function ScheduleRightPanel({
           />
         )}
         {viewType === "grid" && (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            Grid view coming soon...
-          </div>
+          <GridView
+            appointments={appointments}
+            selectedDate={selectedDate}
+            onAppointmentClick={onAppointmentSelect}
+          />
         )}
         {viewType === "calendar" && (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            Calendar view coming soon...
-          </div>
+          <CalendarView
+            appointments={appointments}
+            selectedDate={selectedDate}
+            onDateChange={onDateChange}
+            onAppointmentClick={onAppointmentSelect}
+            currentMonth={calendarMonth}
+            onMonthChange={setCalendarMonth}
+          />
         )}
       </div>
 
