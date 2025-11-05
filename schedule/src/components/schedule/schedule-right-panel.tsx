@@ -28,6 +28,7 @@ interface ScheduleRightPanelProps {
   selectedAppointment: Appointment | null;
   onAppointmentSelect: (appointment: Appointment | null) => void;
   onRefresh: () => void;
+  statusFilter?: string;
 }
 
 export function ScheduleRightPanel({
@@ -38,11 +39,12 @@ export function ScheduleRightPanel({
   onViewTypeChange,
   selectedAppointment,
   onAppointmentSelect,
-
+  statusFilter,
 }: ScheduleRightPanelProps) {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [technicianSearch, setTechnicianSearch] = useState("");
   const [calendarMonth, setCalendarMonth] = useState(selectedDate);
+  const [mapSearchQuery, setMapSearchQuery] = useState("");
 
 
   const formatDateDisplay = (date: Date): string => {
@@ -199,18 +201,33 @@ export function ScheduleRightPanel({
             )}
           </div>
 
-          {/* Technician Search - Far Right (hidden in calendar view) */}
-          {viewType !== "calendar" && (
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search technicians..."
-                value={technicianSearch}
-                onChange={(e) => setTechnicianSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-          )}
+          {/* Right side controls */}
+          <div className="flex items-center gap-3">
+            {/* Map Search - Only show in maps view */}
+            {viewType === "maps" && (
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search appointments or addresses..."
+                  value={mapSearchQuery}
+                  onChange={(e) => setMapSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            )}
+            {/* Technician Search - Hidden in calendar and maps view */}
+            {viewType !== "calendar" && viewType !== "maps" && (
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search technicians..."
+                  value={technicianSearch}
+                  onChange={(e) => setTechnicianSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -229,6 +246,9 @@ export function ScheduleRightPanel({
             appointments={appointments}
             selectedDate={selectedDate}
             onAppointmentClick={onAppointmentSelect}
+            statusFilter={statusFilter}
+            technicianSearch={technicianSearch}
+            searchQuery={mapSearchQuery}
           />
         )}
         {viewType === "grid" && (

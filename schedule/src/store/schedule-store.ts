@@ -1,6 +1,16 @@
 import { create } from "zustand";
 import { Appointment } from "../pages/schedule/types";
 
+// Helper function to get initial viewType from localStorage
+const getInitialViewType = (): "gantt" | "grid" | "maps" | "calendar" => {
+  if (typeof window === "undefined") return "gantt";
+  const saved = localStorage.getItem("schedule-view-type");
+  if (saved && ["gantt", "grid", "maps", "calendar"].includes(saved)) {
+    return saved as "gantt" | "grid" | "maps" | "calendar";
+  }
+  return "gantt";
+};
+
 interface ScheduleState {
   // Appointments
   appointments: Appointment[];
@@ -43,7 +53,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
     endDate: new Date(), // Today
   },
   statusFilter: "all",
-  viewType: "gantt",
+  viewType: getInitialViewType(),
 
   // Actions
   setAppointments: (appointments) => set({ appointments }),
@@ -69,7 +79,13 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
   setSelectedDate: (date) => set({ selectedDate: date }),
   setAppointmentDateRange: (range) => set({ appointmentDateRange: range }),
   setStatusFilter: (filter) => set({ statusFilter: filter }),
-  setViewType: (view) => set({ viewType: view }),
+  setViewType: (view) => {
+    set({ viewType: view });
+    // Save to localStorage
+    if (typeof window !== "undefined") {
+      localStorage.setItem("schedule-view-type", view);
+    }
+  },
 
   // Helper getters
   isAppointmentSelected: (appointmentId) => {

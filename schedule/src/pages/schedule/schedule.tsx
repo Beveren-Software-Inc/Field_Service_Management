@@ -107,6 +107,7 @@ export default function SchedulePage() {
           selectedAppointment={selectedAppointment}
           onAppointmentSelect={setSelectedAppointment}
           onRefresh={loadAppointments}
+          statusFilter={statusFilter}
         />
       </div>
 
