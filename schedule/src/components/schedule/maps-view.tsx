@@ -26,26 +26,33 @@ const STATUS_COLORS: Record<string, { bg: string; border: string; dot: string; h
   Cancelled: { bg: "bg-gray-100", border: "border-gray-300", dot: "bg-gray-400", hex: "#9ca3af", bgHex: "#f3f4f6", borderHex: "#d1d5db" },
 };
 
-// Generate random coordinates for appointments (for demo purposes)
-// In production, this would use actual address geocoding
-const generateRandomCoordinates = (appointmentId: string): [number, number] => {
-  // Use appointment ID as seed for consistent random location
-  const seed = appointmentId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const random = (seed: number) => {
-    const x = Math.sin(seed) * 10000;
-    return x - Math.floor(x);
-  };
+// Get coordinates from appointment location data
+const getCoordinates = (appointment: Appointment): [number, number] | null => {
+	console.log("[Location Debug] getCoordinates called for appointment:", appointment.name, "location:", appointment.location);
+	// If location is an object with lat/lng, use it
+	if (appointment.location && typeof appointment.location === "object" && "lat" in appointment.location && "lng" in appointment.location) {
+		const coords: [number, number] = [appointment.location.lat, appointment.location.lng];
+		console.log("[Location Debug] Found coordinates:", coords);
+		// Validate coordinates are valid numbers
+		if (isNaN(coords[0]) || isNaN(coords[1]) || coords[0] === 0 || coords[1] === 0) {
+			console.log("[Location Debug] Invalid coordinates (0 or NaN):", coords);
+			return null;
+		}
+		return coords;
+	}
+	// Fallback to random coordinates if no location data
+	console.log("[Location Debug] No valid coordinates found for appointment:", appointment.name, "location type:", typeof appointment.location);
+	return null;
+};
 
-  // Random coordinates around a central point (e.g., a city center)
-  // Adjust these center coordinates to your service area
-  const centerLat = 40.7128; // Example: New York City
-  const centerLng = -74.0060;
-  const radius = 0.5; // ~50km radius
-
-  const lat = centerLat + (random(seed) - 0.5) * radius;
-  const lng = centerLng + (random(seed + 1000) - 0.5) * radius;
-
-  return [lat, lng];
+// Parse local datetime helper function
+const parseLocalDateTime = (value: string): Date => {
+  try {
+    const normalized = value.replace("T", " ").slice(0, 19);
+    return parse(normalized, "yyyy-MM-dd HH:mm:ss", new Date());
+  } catch {
+    return new Date(value);
+  }
 };
 
 // Parse local datetime helper function
@@ -141,12 +148,19 @@ export function MapsView({
       // Search query filter (appointments/addresses)
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
+        // Handle location - can be string or object
+        const locationStr = typeof apt.location === "string"
+          ? apt.location
+          : (apt.location && typeof apt.location === "object" && apt.location.service_area)
+            ? apt.location.service_area
+            : "";
         const matches =
           apt.name?.toLowerCase().includes(query) ||
           apt.service_order?.toLowerCase().includes(query) ||
           apt.customer?.toLowerCase().includes(query) ||
           apt.service_type?.toLowerCase().includes(query) ||
-          apt.location?.toLowerCase().includes(query);
+          apt.service_area?.toLowerCase().includes(query) ||
+          locationStr.toLowerCase().includes(query);
         if (!matches) return false;
       }
 
@@ -185,9 +199,26 @@ export function MapsView({
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
 
+    console.log("[Location Debug] Filtered appointments count:", filteredAppointments.length);
+    console.log("[Location Debug] Filtered appointments:", filteredAppointments.map(apt => ({
+      name: apt.name,
+      service_order: apt.service_order,
+      location: apt.location,
+      service_area: apt.service_area
+    })));
+
     // Add markers for filtered appointments
     filteredAppointments.forEach((appointment) => {
-      const coordinates = generateRandomCoordinates(appointment.name);
+      const coordinates = getCoordinates(appointment);
+
+      // Skip appointments without valid location data
+      if (!coordinates) {
+        console.log("[Location Debug] Skipping appointment without coordinates:", appointment.name);
+        return;
+      }
+
+      console.log("[Location Debug] Adding marker for appointment:", appointment.name, "at coordinates:", coordinates);
+
       const colors = STATUS_COLORS[appointment.status] || STATUS_COLORS.Open;
 
       // Create custom icon with status color
@@ -243,10 +274,19 @@ export function MapsView({
       markersRef.current.push(marker);
     });
 
-    // Fit map to show all markers
+    // Fit map to show all markers (only if we have markers)
     if (markersRef.current.length > 0) {
       const group = new L.FeatureGroup(markersRef.current);
       map.fitBounds(group.getBounds().pad(0.1));
+    } else {
+      // If no markers, center on a default location (or first appointment's location if available)
+      const firstWithLocation = filteredAppointments.find(apt => getCoordinates(apt));
+      if (firstWithLocation) {
+        const coords = getCoordinates(firstWithLocation);
+        if (coords) {
+          map.setView(coords, 11);
+        }
+      }
     }
   }, [filteredAppointments, onAppointmentClick]);
 

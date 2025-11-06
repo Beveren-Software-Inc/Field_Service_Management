@@ -14,6 +14,7 @@
   "service_request",
   "type",
   "customer",
+  "service_area",
   "column_break_llgp",
   "posting_date",
   "due_date",
@@ -733,6 +734,15 @@
    "print_hide": 1,
    "read_only": 1,
    "width": "100px"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "service_area",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Service Area",
+   "options": "Service Area"
   }
  ],
  "index_web_pages_for_search": 1,
@@ -747,7 +757,7 @@
    "link_fieldname": "custom_reference_service_document"
   }
  ],
- "modified": "2025-03-09 06:09:53.335659",
+ "modified": "2025-11-06 04:16:32.427091",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Service Order",
@@ -768,6 +778,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [

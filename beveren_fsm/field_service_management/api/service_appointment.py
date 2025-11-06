@@ -95,6 +95,45 @@ def get_appointments(
 			for item in appointment_doc.items
 		]
 
+		# Fetch location from Service Order -> Service Area
+		location_data = None
+		service_area_name = None
+		if appointment_data.get("service_order"):
+			try:
+				service_order = frappe.get_doc("Service Order", appointment_data["service_order"])
+				if service_order.service_area:
+					service_area_name = service_order.service_area
+					try:
+						service_area_doc = frappe.get_doc("Service Area", service_area_name)
+						if hasattr(service_area_doc, "location") and service_area_doc.location:
+							# Parse location if it's a JSON string, otherwise use as-is
+							loc = service_area_doc.location
+							if isinstance(loc, str):
+								try:
+									loc = json.loads(loc)
+								except (json.JSONDecodeError, TypeError):
+									pass
+
+							# Ensure we have lat/lng structure
+							if isinstance(loc, dict) and "lat" in loc and "lng" in loc:
+								location_data = {
+									"lat": float(loc["lat"]),
+									"lng": float(loc["lng"]),
+									"service_area": service_area_name,
+								}
+					except Exception:
+						# Silently skip if Service Area doesn't exist or has issues
+						pass
+			except Exception:
+				# Silently skip if Service Order doesn't exist or has issues
+				pass
+
+		if location_data:
+			appointment_data["location"] = location_data
+		elif service_area_name:
+			# Include service area name even if location is missing
+			appointment_data["service_area"] = service_area_name
+
 		enriched_appointments.append(appointment_data)
 
 	return enriched_appointments
@@ -143,6 +182,44 @@ def get_appointment(name):
 		}
 		for item in appointment_doc.items
 	]
+
+	# Fetch location from Service Order -> Service Area
+	location_data = None
+	service_area_name = None
+	if appointment_data.get("service_order"):
+		try:
+			service_order = frappe.get_doc("Service Order", appointment_data["service_order"])
+			if service_order.service_area:
+				service_area_name = service_order.service_area
+				try:
+					service_area_doc = frappe.get_doc("Service Area", service_area_name)
+					if hasattr(service_area_doc, "location") and service_area_doc.location:
+						# Parse location if it's a JSON string, otherwise use as-is
+						loc = service_area_doc.location
+						if isinstance(loc, str):
+							try:
+								loc = json.loads(loc)
+							except (json.JSONDecodeError, TypeError):
+								pass
+
+						# Ensure we have lat/lng structure
+						if isinstance(loc, dict) and "lat" in loc and "lng" in loc:
+							location_data = {
+								"lat": float(loc["lat"]),
+								"lng": float(loc["lng"]),
+								"service_area": service_area_name,
+							}
+				except Exception:
+					# Silently skip if Service Area doesn't exist or has issues
+					pass
+		except Exception:
+			# Silently skip if Service Order doesn't exist or has issues
+			pass
+
+	if location_data:
+		appointment_data["location"] = location_data
+	elif service_area_name:
+		appointment_data["service_area"] = service_area_name
 
 	return appointment_data
 

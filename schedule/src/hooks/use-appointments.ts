@@ -45,11 +45,17 @@ export async function fetchAppointmentsWithFilter(
     // Frappe API methods return data in result.message
     const appointments = result.message || [];
 
+    console.log("[Location Debug] Fetched appointments:", appointments);
+    console.log("[Location Debug] First appointment location data:", appointments[0]?.location);
+
         //eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return appointments.map((apt: any) => ({
+    const mapped = appointments.map((apt: any) => ({
       ...apt,
       service_technicians: apt.service_technicians || [],
     }));
+
+    console.log("[Location Debug] Mapped appointments with locations:", mapped.filter(apt => apt.location));
+    return mapped;
   } catch (error) {
     console.error("Error fetching appointments:", error);
     throw error;

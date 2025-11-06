@@ -12,7 +12,12 @@ export interface Appointment {
   }>;
   service_type?: string;
   description?: string;
-  location?: string;
+  location?: string | {
+    lat: number;
+    lng: number;
+    service_area?: string;
+  };
+  service_area?: string;
 }
 
 export interface Technician {
