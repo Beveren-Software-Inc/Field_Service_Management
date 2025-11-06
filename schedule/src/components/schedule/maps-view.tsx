@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useEffect, useRef } from "react";
-import { format, parse, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfDay, endOfDay, isWithinInterval } from "date-fns";
+import { format, parse, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import { MapPin } from "lucide-react";
 import { Appointment } from "../../pages/schedule/types";
 import L from "leaflet";
@@ -14,7 +14,7 @@ interface MapsViewProps {
   statusFilter?: string;
   technicianSearch?: string;
   searchQuery?: string;
-  durationFilter?: "thisWeek" | "thisMonth" | "thisYear";
+  durationFilter?: "today" | "thisWeek" | "thisMonth";
 }
 
 const STATUS_COLORS: Record<string, { bg: string; border: string; dot: string; hex: string; bgHex: string; borderHex: string }> = {
@@ -28,17 +28,31 @@ const STATUS_COLORS: Record<string, { bg: string; border: string; dot: string; h
 
 // Get coordinates from appointment location data
 const getCoordinates = (appointment: Appointment): [number, number] | null => {
+	console.log("[Location Debug] getCoordinates called for appointment:", appointment.name, "location:", appointment.location);
 	// If location is an object with lat/lng, use it
 	if (appointment.location && typeof appointment.location === "object" && "lat" in appointment.location && "lng" in appointment.location) {
 		const coords: [number, number] = [appointment.location.lat, appointment.location.lng];
+		console.log("[Location Debug] Found coordinates:", coords);
 		// Validate coordinates are valid numbers
 		if (isNaN(coords[0]) || isNaN(coords[1]) || coords[0] === 0 || coords[1] === 0) {
+			console.log("[Location Debug] Invalid coordinates (0 or NaN):", coords);
 			return null;
 		}
 		return coords;
 	}
 	// Fallback to random coordinates if no location data
+	console.log("[Location Debug] No valid coordinates found for appointment:", appointment.name, "location type:", typeof appointment.location);
 	return null;
+};
+
+// Parse local datetime helper function
+const parseLocalDateTime = (value: string): Date => {
+  try {
+    const normalized = value.replace("T", " ").slice(0, 19);
+    return parse(normalized, "yyyy-MM-dd HH:mm:ss", new Date());
+  } catch {
+    return new Date(value);
+  }
 };
 
 // Parse local datetime helper function
@@ -75,19 +89,15 @@ export function MapsView({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
 
-  // Calculate date range based on duration filter or selected date
+  // Calculate date range based on duration filter
   const dateRange = useMemo(() => {
-    // If no duration filter, use selected date (single day)
-    if (!durationFilter) {
-      return {
-        start: startOfDay(selectedDate),
-        end: endOfDay(selectedDate),
-      };
-    }
-
-    // Otherwise use duration filter
     const today = new Date();
     switch (durationFilter) {
+      case "today":
+        return {
+          start: startOfDay(today),
+          end: endOfDay(today),
+        };
       case "thisWeek":
         return {
           start: startOfWeek(today, { weekStartsOn: 1 }), // Monday
@@ -98,18 +108,13 @@ export function MapsView({
           start: startOfMonth(today),
           end: endOfMonth(today),
         };
-      case "thisYear":
-        return {
-          start: startOfYear(today),
-          end: endOfYear(today),
-        };
       default:
         return {
-          start: startOfDay(selectedDate),
-          end: endOfDay(selectedDate),
+          start: startOfWeek(today, { weekStartsOn: 1 }),
+          end: endOfWeek(today, { weekStartsOn: 1 }),
         };
     }
-  }, [durationFilter, selectedDate]);
+  }, [durationFilter]);
 
   // Filter appointments based on props
   const filteredAppointments = useMemo(() => {
@@ -195,6 +200,13 @@ export function MapsView({
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
 
+    console.log("[Location Debug] Filtered appointments count:", filteredAppointments.length);
+    console.log("[Location Debug] Filtered appointments:", filteredAppointments.map(apt => ({
+      name: apt.name,
+      service_order: apt.service_order,
+      location: apt.location,
+      service_area: apt.service_area
+    })));
 
     // Add markers for filtered appointments
     filteredAppointments.forEach((appointment) => {
@@ -202,9 +214,11 @@ export function MapsView({
 
       // Skip appointments without valid location data
       if (!coordinates) {
+        console.log("[Location Debug] Skipping appointment without coordinates:", appointment.name);
         return;
       }
 
+      console.log("[Location Debug] Adding marker for appointment:", appointment.name, "at coordinates:", coordinates);
 
       const colors = STATUS_COLORS[appointment.status] || STATUS_COLORS.Open;
 
@@ -227,11 +241,7 @@ export function MapsView({
         ? appointment.service_technicians.map(t => t.full_name || t.service_technician).join(", ")
         : "No technicians assigned";
 
-      const locationName = (typeof appointment.location === "object" && appointment.location?.service_area)
-        || (typeof appointment.location === "string" ? appointment.location : null)
-        || appointment.service_area
-        || appointment.customer
-        || "Location not specified";
+      const locationName = appointment.location || appointment.customer || "Location not specified";
 
       const popupContent = `
         <div style="min-width: 250px;">

@@ -8,7 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "../ui/popover";
-import { CalendarIcon, BarChart3, Map, Calendar as CalendarIcon2, Search, Sun, Moon } from "lucide-react";
+import { CalendarIcon, BarChart3, Map, Calendar as CalendarIcon2, Search } from "lucide-react";
 import { format, isToday, addMonths, subMonths, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
 import { cn } from "../../lib/utils";
 import { Appointment } from "../../pages/schedule/types";
@@ -46,40 +46,7 @@ export function ScheduleRightPanel({
   const [technicianSearch, setTechnicianSearch] = useState("");
   const [calendarMonth, setCalendarMonth] = useState(selectedDate);
   const [mapSearchQuery, setMapSearchQuery] = useState("");
-  const [mapDurationFilter, setMapDurationFilter] = useState<"thisWeek" | "thisMonth" | "thisYear" | "">("thisWeek");
-  const [theme, setTheme] = useState<"light" | "dark">(() => {
-    if (typeof window !== "undefined") {
-      const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
-      if (savedTheme) return savedTheme;
-      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    }
-    return "light";
-  });
-
-  // Auto-clear duration filter when a specific date is selected (not today)
-  // Only clear if duration filter is currently set (not already empty)
-  useEffect(() => {
-    if (viewType === "maps" && !isToday(selectedDate) && mapDurationFilter) {
-      setMapDurationFilter("");
-    }
-  }, [selectedDate, viewType]);
-
-  // Apply theme to document
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-    if (typeof window !== "undefined") {
-      localStorage.setItem("theme", theme);
-    }
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === "light" ? "dark" : "light"));
-  };
+  const [mapDurationFilter, setMapDurationFilter] = useState<"today" | "thisWeek" | "thisMonth">("thisWeek");
 
 
   const formatDateDisplay = (date: Date): string => {
@@ -254,21 +221,14 @@ export function ScheduleRightPanel({
           <div className="flex items-center gap-3">
             {/* Map Duration Filter - Only show in maps view */}
             {viewType === "maps" && (
-              <Select value={mapDurationFilter || "date"} onValueChange={(value: "thisWeek" | "thisMonth" | "thisYear" | "date") => {
-                if (value === "date") {
-                  setMapDurationFilter("");
-                } else {
-                  setMapDurationFilter(value);
-                }
-              }}>
+              <Select value={mapDurationFilter} onValueChange={(value: "today" | "thisWeek" | "thisMonth") => setMapDurationFilter(value)}>
                 <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Selected Date" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="date">Selected Date</SelectItem>
+                  <SelectItem value="today">Today</SelectItem>
                   <SelectItem value="thisWeek">This Week</SelectItem>
                   <SelectItem value="thisMonth">This Month</SelectItem>
-                  <SelectItem value="thisYear">This Year</SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -318,7 +278,7 @@ export function ScheduleRightPanel({
             statusFilter={statusFilter}
             technicianSearch={technicianSearch}
             searchQuery={mapSearchQuery}
-            durationFilter={mapDurationFilter || undefined}
+            durationFilter={mapDurationFilter}
           />
         )}
         {viewType === "grid" && (
