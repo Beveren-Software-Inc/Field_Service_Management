@@ -2,16 +2,36 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Service Area", {
+  onload(frm) {
+    // Setup autocomplete when form loads
+    setTimeout(() => {
+      setup_location_autocomplete(frm);
+    }, 100);
+  },
   refresh(frm) {
+    // Setup autocomplete on refresh as well
     setup_location_autocomplete(frm);
   },
 });
 
 function setup_location_autocomplete(frm) {
+  // Get the service_area field
   const field = frm.fields_dict.service_area;
-  if (!field || !field.$input || !field.$input.length) return;
+  if (!field) {
+    console.warn("Service Area field not found");
+    return;
+  }
+
+  if (!field.$input || !field.$input.length) {
+    console.warn("Service Area input element not found");
+    return;
+  }
 
   const inputEl = field.$input.get(0);
+  if (!inputEl) {
+    console.warn("Service Area input element is null");
+    return;
+  }
 
   // Avoid double-binding
   if (inputEl.__bev_autocomplete_bound) return;
@@ -33,37 +53,93 @@ function setup_location_autocomplete(frm) {
     filter: () => true, // we handle filtering via remote results
   });
 
-  // Map from label to full place data
-  let currentResults = [];
+  // Store awesomplete instance and data on input element for persistence
+  inputEl.__bev_awesomplete = awesomplete;
+  inputEl.__bev_currentResults = [];
+  inputEl.__bev_lastQuery = null;
 
-  const searchPlaces = debounce(async (q) => {
-    if (!q || q.trim().length < 2) return;
-    try {
-      const url = new URL("https://nominatim.openstreetmap.org/search");
-      url.searchParams.set("format", "jsonv2");
-      url.searchParams.set("q", q);
-      url.searchParams.set("limit", "7");
-      url.searchParams.set("addressdetails", "1");
-      url.searchParams.set("accept-language", frappe.boot?.lang || "en");
+  console.log("Autocomplete initialized for Service Area field");
 
-      const resp = await fetch(url.toString(), {
-        headers: {
-          Accept: "application/json",
-        },
-      });
-      if (!resp.ok) return;
-      const data = await resp.json();
-      currentResults = (data || []).map((it) => ({
-        label: it.display_name,
-        value: it.display_name,
-        lat: parseFloat(it.lat),
-        lng: parseFloat(it.lon),
-      }));
-      awesomplete.list = currentResults.map((r) => r.label);
-    } catch (e) {
-      // Silent fail; keep UX smooth
+  const searchPlaces = debounce((q) => {
+    // Get instances from input element (ensures persistence across callbacks)
+    const awesompleteInstance = inputEl.__bev_awesomplete;
+    let currentResults = inputEl.__bev_currentResults || [];
+    let lastQuery = inputEl.__bev_lastQuery;
+
+    if (!awesompleteInstance) {
+      console.warn("Awesomplete instance not found on input element");
+      return;
     }
-  }, 350);
+
+    if (!q || q.trim().length < 2) {
+      awesompleteInstance.list = [];
+      inputEl.__bev_lastQuery = null;
+      return;
+    }
+
+    // Store the current query to identify stale responses
+    const queryId = q.trim();
+    inputEl.__bev_lastQuery = queryId;
+
+    console.log("Searching for:", queryId);
+
+    // Use backend API to avoid connection/CORS issues
+    frappe.call({
+      method:
+        "beveren_fsm.field_service_management.api.geocoding.search_places",
+      args: {
+        query: q,
+        limit: 7,
+      },
+      callback: (r) => {
+        // Get instances from input element (ensures persistence)
+        const awesompleteInstance = inputEl.__bev_awesomplete;
+        const lastQuery = inputEl.__bev_lastQuery;
+
+        if (!awesompleteInstance) {
+          console.warn("Awesomplete instance not found in callback");
+          return;
+        }
+
+        console.log("API Response:", r);
+        // Only process if this is still the latest query (ignore stale responses)
+        if (lastQuery === queryId) {
+          if (r && r.message && Array.isArray(r.message)) {
+            const results = r.message || [];
+            inputEl.__bev_currentResults = results;
+            // Safely map results and update autocomplete
+            const autocompleteList = results
+              .map((result) => result.label || result.value || "")
+              .filter(Boolean); // Remove empty strings
+            awesompleteInstance.list = autocompleteList;
+            console.log(
+              "Updated autocomplete with",
+              autocompleteList ? autocompleteList.length : 0,
+              "items"
+            );
+          } else {
+            console.warn("Invalid response format:", r);
+            inputEl.__bev_currentResults = [];
+            awesompleteInstance.list = [];
+          }
+        } else {
+          console.log("Ignoring stale response for:", queryId);
+        }
+      },
+      error: (err) => {
+        // Get instances from input element (ensures persistence)
+        const awesompleteInstance = inputEl.__bev_awesomplete;
+        const lastQuery = inputEl.__bev_lastQuery;
+
+        console.error("API Error:", err);
+        // Only clear if this was the latest query
+        if (lastQuery === queryId && awesompleteInstance) {
+          inputEl.__bev_currentResults = [];
+          awesompleteInstance.list = [];
+        }
+      },
+    });
+  }, 250); // Reduced from 350ms to 250ms for faster response
 
   // Bind input listener
   field.$input.on("input", (e) => {
@@ -73,6 +149,7 @@ function setup_location_autocomplete(frm) {
 
   // When user chooses a suggestion
   inputEl.addEventListener("awesomplete-selectcomplete", (evt) => {
+    const currentResults = inputEl.__bev_currentResults || [];
     const label = evt.text && (evt.text.value || evt.text);
     const match = currentResults.find((r) => r.label === label);
     if (!match) return;
@@ -80,6 +157,17 @@ function setup_location_autocomplete(frm) {
     // Set name from selected location
     if (frm.doc.service_area !== match.value) {
       frm.set_value("service_area", match.value);
+    }
+
+    // CRITICAL: Save location coordinates to the location field
+    // Frappe Geolocation field expects JSON string with lat and lng
+    const locationData = JSON.stringify({
+      lat: match.lat,
+      lng: match.lng,
+    });
+
+    if (frm.doc.location !== locationData) {
+      frm.set_value("location", locationData);
     }
   });
 }
