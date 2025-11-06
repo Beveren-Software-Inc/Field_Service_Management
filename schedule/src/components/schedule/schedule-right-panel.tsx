@@ -46,15 +46,7 @@ export function ScheduleRightPanel({
   const [technicianSearch, setTechnicianSearch] = useState("");
   const [calendarMonth, setCalendarMonth] = useState(selectedDate);
   const [mapSearchQuery, setMapSearchQuery] = useState("");
-  const [mapDurationFilter, setMapDurationFilter] = useState<"thisWeek" | "thisMonth" | "thisYear" | "">("thisWeek");
-
-  // Auto-clear duration filter when a specific date is selected (not today)
-  // Only clear if duration filter is currently set (not already empty)
-  useEffect(() => {
-    if (viewType === "maps" && !isToday(selectedDate) && mapDurationFilter) {
-      setMapDurationFilter("");
-    }
-  }, [selectedDate, viewType]);
+  const [mapDurationFilter, setMapDurationFilter] = useState<"today" | "thisWeek" | "thisMonth">("thisWeek");
 
 
   const formatDateDisplay = (date: Date): string => {
@@ -215,21 +207,14 @@ export function ScheduleRightPanel({
           <div className="flex items-center gap-3">
             {/* Map Duration Filter - Only show in maps view */}
             {viewType === "maps" && (
-              <Select value={mapDurationFilter || "date"} onValueChange={(value: "thisWeek" | "thisMonth" | "thisYear" | "date") => {
-                if (value === "date") {
-                  setMapDurationFilter("");
-                } else {
-                  setMapDurationFilter(value);
-                }
-              }}>
+              <Select value={mapDurationFilter} onValueChange={(value: "today" | "thisWeek" | "thisMonth") => setMapDurationFilter(value)}>
                 <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Selected Date" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="date">Selected Date</SelectItem>
+                  <SelectItem value="today">Today</SelectItem>
                   <SelectItem value="thisWeek">This Week</SelectItem>
                   <SelectItem value="thisMonth">This Month</SelectItem>
-                  <SelectItem value="thisYear">This Year</SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -279,7 +264,7 @@ export function ScheduleRightPanel({
             statusFilter={statusFilter}
             technicianSearch={technicianSearch}
             searchQuery={mapSearchQuery}
-            durationFilter={mapDurationFilter || undefined}
+            durationFilter={mapDurationFilter}
           />
         )}
         {viewType === "grid" && (

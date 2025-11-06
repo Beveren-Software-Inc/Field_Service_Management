@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useEffect, useRef } from "react";
-import { format, parse, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfDay, endOfDay, isWithinInterval } from "date-fns";
+import { format, parse, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import { MapPin } from "lucide-react";
 import { Appointment } from "../../pages/schedule/types";
 import L from "leaflet";
@@ -14,7 +14,7 @@ interface MapsViewProps {
   statusFilter?: string;
   technicianSearch?: string;
   searchQuery?: string;
-  durationFilter?: "thisWeek" | "thisMonth" | "thisYear";
+  durationFilter?: "today" | "thisWeek" | "thisMonth";
 }
 
 const STATUS_COLORS: Record<string, { bg: string; border: string; dot: string; hex: string; bgHex: string; borderHex: string }> = {
@@ -55,6 +55,16 @@ const parseLocalDateTime = (value: string): Date => {
   }
 };
 
+// Parse local datetime helper function
+const parseLocalDateTime = (value: string): Date => {
+  try {
+    const normalized = value.replace("T", " ").slice(0, 19);
+    return parse(normalized, "yyyy-MM-dd HH:mm:ss", new Date());
+  } catch {
+    return new Date(value);
+  }
+};
+
 // Fix Leaflet default icon issue
 if (typeof window !== "undefined") {
   delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -78,19 +88,15 @@ export function MapsView({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
 
-  // Calculate date range based on duration filter or selected date
+  // Calculate date range based on duration filter
   const dateRange = useMemo(() => {
-    // If no duration filter, use selected date (single day)
-    if (!durationFilter) {
-      return {
-        start: startOfDay(selectedDate),
-        end: endOfDay(selectedDate),
-      };
-    }
-
-    // Otherwise use duration filter
     const today = new Date();
     switch (durationFilter) {
+      case "today":
+        return {
+          start: startOfDay(today),
+          end: endOfDay(today),
+        };
       case "thisWeek":
         return {
           start: startOfWeek(today, { weekStartsOn: 1 }), // Monday
@@ -101,18 +107,13 @@ export function MapsView({
           start: startOfMonth(today),
           end: endOfMonth(today),
         };
-      case "thisYear":
-        return {
-          start: startOfYear(today),
-          end: endOfYear(today),
-        };
       default:
         return {
-          start: startOfDay(selectedDate),
-          end: endOfDay(selectedDate),
+          start: startOfWeek(today, { weekStartsOn: 1 }),
+          end: endOfWeek(today, { weekStartsOn: 1 }),
         };
     }
-  }, [durationFilter, selectedDate]);
+  }, [durationFilter]);
 
   // Filter appointments based on props
   const filteredAppointments = useMemo(() => {
@@ -239,11 +240,7 @@ export function MapsView({
         ? appointment.service_technicians.map(t => t.full_name || t.service_technician).join(", ")
         : "No technicians assigned";
 
-      const locationName = (typeof appointment.location === "object" && appointment.location?.service_area)
-        || (typeof appointment.location === "string" ? appointment.location : null)
-        || appointment.service_area
-        || appointment.customer
-        || "Location not specified";
+      const locationName = appointment.location || appointment.customer || "Location not specified";
 
       const popupContent = `
         <div style="min-width: 250px;">
