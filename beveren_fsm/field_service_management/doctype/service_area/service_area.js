@@ -3,6 +3,25 @@
 
 frappe.ui.form.on("Service Area", {
   onload(frm) {
+    // Validate existing location data
+    if (frm.doc.location) {
+      try {
+        const loc =
+          typeof frm.doc.location === "string"
+            ? JSON.parse(frm.doc.location)
+            : frm.doc.location;
+
+        // Check if location is valid
+        if (loc && loc.lat === 0 && loc.lng === 0) {
+          // Clear invalid 0,0 coordinates
+          frm.set_value("location", "");
+        }
+      } catch (e) {
+        // Invalid JSON, clear it
+        frm.set_value("location", "");
+      }
+    }
+
     // Setup autocomplete when form loads
     setTimeout(() => {
       setup_location_autocomplete(frm);
@@ -161,13 +180,31 @@ function setup_location_autocomplete(frm) {
 
     // CRITICAL: Save location coordinates to the location field
     // Frappe Geolocation field expects JSON string with lat and lng
-    const locationData = JSON.stringify({
-      lat: match.lat,
-      lng: match.lng,
-    });
+    // Validate coordinates are valid before saving
+    const lat = parseFloat(match.lat);
+    const lng = parseFloat(match.lng);
 
-    if (frm.doc.location !== locationData) {
-      frm.set_value("location", locationData);
+    // Only save if coordinates are valid (not 0,0 and within valid ranges)
+    if (
+      !isNaN(lat) &&
+      !isNaN(lng) &&
+      lat !== 0 &&
+      lng !== 0 &&
+      lat >= -90 &&
+      lat <= 90 &&
+      lng >= -180 &&
+      lng <= 180
+    ) {
+      const locationData = JSON.stringify({
+        lat: lat,
+        lng: lng,
+      });
+
+      if (frm.doc.location !== locationData) {
+        frm.set_value("location", locationData);
+      }
+    } else {
+      console.warn("Invalid coordinates detected:", lat, lng);
     }
   });
 }
