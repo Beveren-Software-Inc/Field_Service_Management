@@ -341,7 +341,7 @@
    "fieldname": "current_product_location",
    "fieldtype": "Select",
    "label": "Current Product Location",
-   "options": "\nAt Customer Site\nAwaiting Pickup\nPickup\nIn Transit to Workshop\nAt Workshop\nIn Transit to Vendor\nAt Vendor\nIn Transit from Vendor\nReady for Delivery\nDelivery to Customer\nDelivered to Customer\nTransfer\nReturn\nClosed\nOther"
+   "options": "\nAt Customer Site\nAwaiting Pickup\nPickup\nIn Transit to Workshop\nAt Workshop\nIn Transit to Vendor\nAt Vendor\nIn Transit from Vendor\nReceive From Vendor\nReady for Delivery\nDelivery to Customer\nDelivered to Customer\nTransfer\nReturn\nClosed\nOther"
   },
   {
    "fieldname": "section_break_mzqv",
@@ -368,7 +368,7 @@
    "link_fieldname": "service_request"
   }
  ],
- "modified": "2025-11-11 05:38:33.411473",
+ "modified": "2025-11-11 06:18:32.425922",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Service Request",

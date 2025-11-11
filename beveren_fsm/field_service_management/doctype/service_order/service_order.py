@@ -366,7 +366,7 @@ def make_delivery_note(service_order: str, items=None):
 
 
 @frappe.whitelist()
-def make_purchase_receipt(service_order: str):
+def make_purchase_receipt(service_order: str, items=None):
 	order = frappe.get_doc("Service Order", service_order)
 
 	if not order.service_request:
@@ -390,21 +390,90 @@ def make_purchase_receipt(service_order: str):
 	purchase_receipt.terms = getattr(order, "terms", None)
 	purchase_receipt.custom_service_order = order.name
 
-	for item in order.items or []:
+	order_item_map = {item.item_code: item for item in order.items or []}
+
+	if items:
+		try:
+			items = frappe.parse_json(items)
+		except Exception:
+			pass
+	else:
+		items = []
+		for item in order.items or []:
+			if getattr(item, "is_service", 0):
+				continue
+			items.append(
+				{
+					"item_code": item.item_code,
+					"qty": item.qty,
+					"max_qty": item.qty,
+					"rate": getattr(item, "rate", None),
+					"amount": getattr(item, "amount", None),
+					"warehouse": item.get("warehouse"),
+				}
+			)
+
+	if not items:
+		frappe.throw(_("No items selected for the Purchase Receipt."))
+
+	selected = []
+	for row in items:
+		item_code = row.get("item_code")
+		if not item_code:
+			continue
+		order_row = order_item_map.get(item_code)
+		if not order_row:
+			continue
+
+		qty = flt(row.get("qty") or 0)
+		if qty <= 0:
+			continue
+
+		max_qty = flt(row.get("max_qty") or order_row.qty)
+		if qty > max_qty:
+			frappe.throw(_("Quantity for item {0} cannot exceed {1}.").format(item_code, max_qty))
+
+		selected.append(
+			(
+				order_row,
+				{
+					"item_code": item_code,
+					"qty": qty,
+					"rate": flt(
+						row.get("rate") if row.get("rate") is not None else getattr(order_row, "rate", 0)
+					),
+					"amount": flt(row.get("amount") if row.get("amount") is not None else 0),
+					"warehouse": row.get("warehouse") or order_row.get("warehouse"),
+				},
+			)
+		)
+
+	if not selected:
+		frappe.throw(_("No items were selected for the Purchase Receipt."))
+
+	for order_row, data in selected:
+		rate = data.get("rate", 0)
+		if rate == 0 and getattr(order_row, "rate", None):
+			rate = flt(order_row.rate)
+		amount = data.get("amount")
+		if not amount:
+			amount = rate * data["qty"]
+
 		purchase_receipt.append(
 			"items",
 			{
-				"item_code": item.item_code,
-				"item_name": getattr(item, "item_name", None),
-				"description": getattr(item, "description", None),
-				"qty": item.qty,
-				"uom": getattr(item, "uom", None),
+				"item_code": data["item_code"],
+				"item_name": getattr(order_row, "item_name", None),
+				"description": getattr(order_row, "description", None),
+				"qty": data["qty"],
+				"uom": getattr(order_row, "uom", None),
+				"stock_uom": getattr(order_row, "stock_uom", None) or getattr(order_row, "uom", None),
 				"conversion_factor": 1,
-				"rate": getattr(item, "rate", None),
-				"amount": getattr(item, "amount", None),
+				"rate": rate,
+				"amount": amount,
 				"sales_order": order.name,
-				"warehouse": getattr(item, "warehouse", None),
-				"serial_no": getattr(item, "serial_no", None),
+				"warehouse": data.get("warehouse"),
+				"serial_no": getattr(order_row, "serial_no", None),
 			},
 		)
 

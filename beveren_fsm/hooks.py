@@ -24,7 +24,7 @@ fixtures = [
 	# Export your custom "Service Type" doctype
 	"Service Type",
 	# Export the "Service" Workspace only
-	{"dt": "Workspace", "filters": {"name": "Service"}},
+	# {"dt": "Workspace", "filters": {"name": "Service"}},
 	# Export specific Custom Fields related to Service Order links
 	{
 		"doctype": "Custom Field",

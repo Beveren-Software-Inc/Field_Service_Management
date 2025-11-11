@@ -441,6 +441,7 @@ frappe.ui.form.on("Service Order", {
 
     let stockItems = [];
     let deliveryItems = [];
+    let purchaseReceiptItems = [];
     let purchaseItems = [];
     const orderItems = frm.doc.items || [];
 
@@ -458,6 +459,32 @@ frappe.ui.form.on("Service Order", {
         frappe.msgprint(__("No deliverable items are available."));
         return;
       }
+    }
+
+    if (config.doc_type === "Purchase Receipt") {
+      purchaseReceiptItems = orderItems.filter((item) => !item.is_service);
+      if (!purchaseReceiptItems.length) {
+        frappe.msgprint(__("No items are available to receive."));
+        return;
+      }
+      purchaseReceiptItems = purchaseReceiptItems.map((item) => {
+        const qty =
+          typeof item.qty === "number" ? item.qty : parseFloat(item.qty) || 0;
+        const rate =
+          typeof item.rate === "number"
+            ? item.rate
+            : parseFloat(item.rate) || 0;
+        return {
+          include_item: 1,
+          item_code: item.item_code,
+          item_name: item.item_name,
+          qty,
+          max_qty: qty,
+          warehouse: item.warehouse || "",
+          rate,
+          amount: rate * qty,
+        };
+      });
     }
 
     if (
@@ -636,6 +663,75 @@ frappe.ui.form.on("Service Order", {
       });
     }
 
+    if (config.doc_type === "Purchase Receipt") {
+      fields.push({
+        fieldname: "purchase_receipt_items",
+        fieldtype: "Table",
+        label: __("Items to Receive"),
+        options: "Service Order Item",
+        in_place_edit: true,
+        reqd: 1,
+        fields: [
+          {
+            fieldname: "include_item",
+            fieldtype: "Check",
+            label: __("Include"),
+            default: 1,
+            in_list_view: 1,
+            width: "60px",
+          },
+          {
+            fieldname: "item_code",
+            label: __("Item Code"),
+            fieldtype: "Link",
+            options: "Item",
+            in_list_view: 1,
+            read_only: 1,
+          },
+          {
+            fieldname: "item_name",
+            label: __("Item Name"),
+            fieldtype: "Data",
+            in_list_view: 1,
+            read_only: 1,
+          },
+          {
+            fieldname: "qty",
+            label: __("Quantity"),
+            fieldtype: "Float",
+            in_list_view: 1,
+          },
+          {
+            fieldname: "max_qty",
+            label: __("Max Quantity"),
+            fieldtype: "Float",
+            read_only: 1,
+            hidden: 1,
+          },
+          {
+            fieldname: "warehouse",
+            label: __("Warehouse"),
+            fieldtype: "Link",
+            options: "Warehouse",
+            in_list_view: 1,
+          },
+          {
+            fieldname: "rate",
+            label: __("Rate"),
+            fieldtype: "Currency",
+            in_list_view: 1,
+          },
+          {
+            fieldname: "amount",
+            label: __("Amount"),
+            fieldtype: "Currency",
+            read_only: 1,
+            in_list_view: 1,
+          },
+        ],
+      });
+    }
+
     if (
       config.doc_type === "Purchase Order" ||
       config.doc_type === "Purchase Invoice"
@@ -801,6 +897,45 @@ frappe.ui.form.on("Service Order", {
           methodArgs.items = selectedItems;
         }
 
+        if (config.doc_type === "Purchase Receipt") {
+          const tableField = dialog.get_field("purchase_receipt_items");
+          const tableData = (tableField.df.data || []).filter(
+            (row) => row.include_item
+          );
+
+          if (!tableData.length) {
+            dialog.enable_primary_action();
+            frappe.throw(__("Select at least one item to receive."));
+          }
+
+          tableData.forEach((row) => {
+            if (row.max_qty && row.qty > row.max_qty) {
+              dialog.enable_primary_action();
+              frappe.throw(
+                __(
+                  "Quantity for item {0} exceeds the available quantity ({1}).",
+                  [row.item_code, row.max_qty]
+                )
+              );
+            }
+
+            const qty = parseFloat(row.qty) || 0;
+            const rate = parseFloat(row.rate) || 0;
+            row.amount = rate * qty;
+          });
+
+          selectedItems = tableData.map((row) => ({
+            item_code: row.item_code,
+            qty: row.qty,
+            max_qty: row.max_qty,
+            warehouse: row.warehouse,
+            rate: row.rate,
+            amount: row.amount,
+          }));
+
+          methodArgs.items = selectedItems;
+        }
+
         if (
           config.doc_type === "Purchase Order" ||
           config.doc_type === "Purchase Invoice"
@@ -931,6 +1066,12 @@ frappe.ui.form.on("Service Order", {
       tableField.grid.refresh();
     }
 
+    if (config.doc_type === "Purchase Receipt") {
+      const tableField = dialog.get_field("purchase_receipt_items");
+      tableField.df.data = purchaseReceiptItems;
+      tableField.grid.refresh();
+    }
+
     if (
       config.doc_type === "Purchase Order" ||
       config.doc_type === "Purchase Invoice"
@@ -947,18 +1088,59 @@ frappe.ui.form.on("Service Order", {
       return;
     }
 
-    frappe.confirm(
-      __(
-        "This Service Order exceeds the linked AMC budget. Do you want to continue with submission?"
-      ),
-      () => {
+    const dialog = new frappe.ui.Dialog({
+      title: __("Confirm Submission"),
+      fields: [
+        {
+          fieldtype: "HTML",
+          options: `<div style="padding: 15px 0;">
+            <p style="font-size: 14px; color: #333;">
+              ${__(
+                "This Service Order exceeds the linked AMC budget. Do you want to continue with submission?"
+              )}
+            </p>
+          </div>`,
+        },
+      ],
+      primary_action_label: __("Confirm"),
+      primary_action() {
         frm.__over_budget_confirmed = true;
+        dialog.hide();
         frm.savesubmit();
       },
-      () => {
+      secondary_action_label: __("Cancel"),
+      secondary_action() {
         frm.__over_budget_confirmed = false;
-      }
-    );
+        dialog.hide();
+      },
+    });
+
+    dialog.show();
+
+    // Style the primary button to be orange after dialog is shown
+    setTimeout(() => {
+      const primaryBtn = dialog.$wrapper.find(".btn-primary");
+      primaryBtn.css({
+        "background-color": "#ff9800",
+        "border-color": "#ff9800",
+        color: "#fff",
+      });
+
+      // Add hover effect
+      primaryBtn.on("mouseenter", function () {
+        $(this).css({
+          "background-color": "#f57c00",
+          "border-color": "#f57c00",
+        });
+      });
+
+      primaryBtn.on("mouseleave", function () {
+        $(this).css({
+          "background-color": "#ff9800",
+          "border-color": "#ff9800",
+        });
+      });
+    }, 100);
 
     frappe.validated = false;
   },
