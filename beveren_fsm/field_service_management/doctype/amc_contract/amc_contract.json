@@ -1,0 +1,147 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:AMC-{YY}-{####}",
+ "creation": "2025-11-11 02:24:21.750664",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "customer",
+  "serial_no",
+  "currency",
+  "column_break_oqaw",
+  "item_code",
+  "contract_period",
+  "section_break_floj",
+  "total",
+  "service_budget",
+  "column_break_stxb",
+  "spare_parts_budget",
+  "utilized_amounts_section",
+  "service_utilized",
+  "service_order_reference",
+  "column_break_famr",
+  "spare_parts_utilized"
+ ],
+ "fields": [
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Customer",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "serial_no",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Serial No",
+   "options": "Serial No",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_oqaw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "serial_no.item_code",
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "label": "Item Code",
+   "options": "Item"
+  },
+  {
+   "fieldname": "contract_period",
+   "fieldtype": "Int",
+   "label": "Contract Period(Months)"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency"
+  },
+  {
+   "fieldname": "section_break_floj",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Currency",
+   "label": "Total Value",
+   "options": "currency"
+  },
+  {
+   "fieldname": "service_budget",
+   "fieldtype": "Currency",
+   "label": "Service Budget",
+   "options": "currency"
+  },
+  {
+   "fieldname": "column_break_stxb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "spare_parts_budget",
+   "fieldtype": "Currency",
+   "label": "Spare Parts Budget",
+   "options": "currency"
+  },
+  {
+   "fieldname": "utilized_amounts_section",
+   "fieldtype": "Section Break",
+   "label": "Utilized Amounts"
+  },
+  {
+   "fieldname": "service_utilized",
+   "fieldtype": "Currency",
+   "label": "Service Utilized",
+   "options": "currency"
+  },
+  {
+   "fieldname": "column_break_famr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "spare_parts_utilized",
+   "fieldtype": "Currency",
+   "label": "Spare Parts Utilized",
+   "options": "currency"
+  },
+  {
+   "fieldname": "service_order_reference",
+   "fieldtype": "Link",
+   "label": "Service Order Reference",
+   "options": "Service Order"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-11-11 03:37:06.959996",
+ "modified_by": "Administrator",
+ "module": "Field Service Management",
+ "name": "AMC Contract",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

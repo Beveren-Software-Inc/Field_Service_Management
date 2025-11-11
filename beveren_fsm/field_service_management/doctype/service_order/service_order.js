@@ -1,3 +1,26 @@
+const MOVEMENT_TYPE_OPTIONS = [
+  "Pickup",
+  "Transfer",
+  "Send To Vendor",
+  "Receive From Vendor",
+  "Delivery To Customer",
+  "Return",
+  "Other",
+];
+
+const LOCATION_OPTIONS = [
+  "At Customer Site",
+  "Awaiting Pickup",
+  "In Transit to Workshop",
+  "At Workshop",
+  "In Transit to Vendor",
+  "At Vendor",
+  "In Transit from Vendor",
+  "Ready for Delivery",
+  "Delivered to Customer",
+  "Closed",
+];
+
 // Ensure this namespace exists
 frappe.provide("beveren_fsm.field_service_management");
 
@@ -27,6 +50,10 @@ frappe.ui.form.on("Service Order", {
     }
   },
   refresh(frm) {
+    if (frm.doc.docstatus === 0) {
+      frm.__over_budget_confirmed = false;
+    }
+
     // set posting date
     frm.trigger("set_posting_date");
 
@@ -91,6 +118,21 @@ frappe.ui.form.on("Service Order", {
           __("Create")
         );
       }
+      frm.add_custom_button(
+        __("Stock Entry"),
+        () => frm.events.create_stock_entry(frm),
+        __("Create")
+      );
+      frm.add_custom_button(
+        __("Delivery Note"),
+        () => frm.events.create_delivery_note(frm),
+        __("Create")
+      );
+      frm.add_custom_button(
+        __("Purchase Receipt"),
+        () => frm.events.create_purchase_receipt(frm),
+        __("Create")
+      );
       cur_frm.page.set_inner_btn_group_as_primary(__("Create"));
     }
 
@@ -348,6 +390,153 @@ frappe.ui.form.on("Service Order", {
 
     dialog.show();
   },
+  create_stock_entry(frm) {
+    frm.events.open_logistics_dialog(frm, {
+      doc_type: "Stock Entry",
+      method:
+        "beveren_fsm.field_service_management.doctype.service_order.service_order.make_stock_entry",
+    });
+  },
+  create_delivery_note(frm) {
+    frm.events.open_logistics_dialog(frm, {
+      doc_type: "Delivery Note",
+      method:
+        "beveren_fsm.field_service_management.doctype.service_order.service_order.make_delivery_note",
+    });
+  },
+  create_purchase_receipt(frm) {
+    frm.events.open_logistics_dialog(frm, {
+      doc_type: "Purchase Receipt",
+      method:
+        "beveren_fsm.field_service_management.doctype.service_order.service_order.make_purchase_receipt",
+    });
+  },
+  open_logistics_dialog(frm, config) {
+    if (!frm.doc.name) {
+      frappe.throw(
+        __("Please save the Service Order before creating logistics documents.")
+      );
+    }
+
+    const dialog = new frappe.ui.Dialog({
+      title: __("Create {0}", [config.doc_type]),
+      fields: [
+        {
+          fieldname: "movement_type",
+          fieldtype: "Select",
+          label: __("Movement Type"),
+          options: ["", ...MOVEMENT_TYPE_OPTIONS].join("\n"),
+          reqd: 1,
+        },
+        {
+          fieldname: "movement_date",
+          fieldtype: "Date",
+          label: __("Movement Date"),
+          default: frappe.datetime.get_today(),
+          reqd: 1,
+        },
+        {
+          fieldname: "from_location",
+          fieldtype: "Select",
+          label: __("From Location"),
+          options: ["", ...LOCATION_OPTIONS].join("\n"),
+          reqd: 0,
+        },
+        {
+          fieldname: "to_location",
+          fieldtype: "Select",
+          label: __("To Location"),
+          options: ["", ...LOCATION_OPTIONS].join("\n"),
+          reqd: 1,
+        },
+      ],
+      primary_action_label: __("Continue"),
+      primary_action(values) {
+        dialog.disable_primary_action();
+        let docname = null;
+        frappe.call({
+          method: config.method,
+          args: {
+            service_order: frm.doc.name,
+          },
+          callback(r) {
+            dialog.enable_primary_action();
+            if (r.exc) {
+              return;
+            }
+
+            if (r.message) {
+              const doc = frappe.model.sync(r.message)[0];
+              if (doc?.name && !doc.name.startsWith("new-")) {
+                docname = doc.name;
+              }
+              frappe.set_route("Form", doc.doctype, doc.name);
+            }
+
+            const movementArgs = {
+              service_order: frm.doc.name,
+              movement_type: values.movement_type,
+              movement_date: values.movement_date,
+              from_location: values.from_location,
+              to_location: values.to_location,
+            };
+
+            if (docname) {
+              movementArgs.linked_document_type = config.doc_type;
+              movementArgs.linked_document = docname;
+            }
+
+            frappe.call({
+              method:
+                "beveren_fsm.field_service_management.doctype.service_order.service_order.record_product_movement",
+              args: movementArgs,
+              callback: () => {
+                frappe.show_alert({
+                  message: __("Product movement logged on Service Request."),
+                  indicator: "green",
+                });
+              },
+              error: () => {
+                frappe.msgprint({
+                  title: __("Product Movement"),
+                  indicator: "red",
+                  message: __(
+                    "Unable to record product movement. Please review the Service Request manually."
+                  ),
+                });
+              },
+            });
+          },
+          error: () => {
+            dialog.enable_primary_action();
+          },
+        });
+        dialog.hide();
+      },
+    });
+
+    dialog.show();
+  },
+  before_submit(frm) {
+    if (!frm.doc.is_over_budget || frm.__over_budget_confirmed) {
+      return;
+    }
+
+    frappe.confirm(
+      __(
+        "This Service Order exceeds the linked AMC budget. Do you want to continue with submission?"
+      ),
+      () => {
+        frm.__over_budget_confirmed = true;
+        frm.savesubmit();
+      },
+      () => {
+        frm.__over_budget_confirmed = false;
+      }
+    );
+
+    frappe.validated = false;
+  },
 });
 
 beveren_fsm.field_service_management.ServiceOrderController = class ServiceOrderController extends (
@@ -373,11 +562,27 @@ beveren_fsm.field_service_management.ServiceOrderController = class ServiceOrder
 cur_frm.script_manager.make(
   beveren_fsm.field_service_management.ServiceOrderController
 );
-frappe.ui.form.on(
-  "Service Order Item",
-  "items_on_form_rendered",
-  "packed_items_on_form_rendered",
-  function (frm, cdt, cdn) {
+frappe.ui.form.on("Service Order Item", {
+  item_code(frm, cdt, cdn) {
+    const row = frappe.get_doc(cdt, cdn);
+    if (!row.item_code) {
+      return;
+    }
+
+    frappe.db.get_value("Item", row.item_code, "item_group").then((r) => {
+      const itemGroup = (r.message?.item_group || "").trim().toLowerCase();
+
+      const isService = ["service", "services"].includes(itemGroup) ? 1 : 0;
+
+      if (row.is_service !== isService) {
+        frappe.model.set_value(cdt, cdn, "is_service", isService);
+      }
+    });
+  },
+  items_on_form_rendered(frm, cdt, cdn) {
     // enable tax_amount field if Actual
-  }
-);
+  },
+  packed_items_on_form_rendered(frm, cdt, cdn) {
+    // enable tax_amount field if Actual
+  },
+});

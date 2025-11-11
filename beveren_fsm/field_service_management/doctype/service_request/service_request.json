@@ -17,8 +17,12 @@
   "posting_date",
   "due_date",
   "priority",
+  "current_product_location",
   "column_break_cazs",
   "company",
+  "service_category",
+  "repair_vendor",
+  "amc_contract",
   "accounting_dimensions_section",
   "cost_center",
   "column_break_digf",
@@ -45,7 +49,9 @@
   "preferred_time",
   "column_break_extu",
   "preference_note",
-  "amended_from"
+  "amended_from",
+  "section_break_mzqv",
+  "product_movement"
  ],
  "fields": [
   {
@@ -309,6 +315,43 @@
    "fieldname": "amc_expiry_date",
    "fieldtype": "Date",
    "label": "AMC Expiry Date"
+  },
+  {
+   "fieldname": "service_category",
+   "fieldtype": "Select",
+   "label": "Service Category",
+   "options": "\nOnsite\nWorkshop\nVendor"
+  },
+  {
+   "fieldname": "amc_contract",
+   "fieldtype": "Link",
+   "label": "AMC Contract",
+   "options": "AMC Contract"
+  },
+  {
+   "depends_on": "eval: doc.service_category==\"Vendor\"",
+   "fieldname": "repair_vendor",
+   "fieldtype": "Link",
+   "label": "Repair Vendor",
+   "options": "Supplier"
+  },
+  {
+   "default": "At Customer Site",
+   "fieldname": "current_product_location",
+   "fieldtype": "Select",
+   "label": "Current Product Location",
+   "options": "\nAt Customer Site\nAwaiting Pickup\nPickup\nIn Transit to Workshop\nAt Workshop\nIn Transit to Vendor\nAt Vendor\nIn Transit from Vendor\nReady for Delivery\nDelivery to Customer\nDelivered to Customer\nTransfer\nReturn\nClosed\nOther"
+  },
+  {
+   "fieldname": "section_break_mzqv",
+   "fieldtype": "Section Break",
+   "label": "Movement Tracker"
+  },
+  {
+   "fieldname": "product_movement",
+   "fieldtype": "Table",
+   "label": "Product Movement",
+   "options": "Product Movement"
   }
  ],
  "index_web_pages_for_search": 1,
@@ -323,7 +366,7 @@
    "link_fieldname": "service_request"
   }
  ],
- "modified": "2025-02-21 06:57:57.002303",
+ "modified": "2025-11-11 05:23:44.412626",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Service Request",
@@ -343,6 +386,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [

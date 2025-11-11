@@ -1,0 +1,95 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-11-11 02:15:17.817107",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "movement_type",
+  "movement_date",
+  "from_location",
+  "to_location",
+  "column_break_cmtq",
+  "linked_document_type",
+  "linked_document",
+  "handled_by"
+ ],
+ "fields": [
+  {
+   "fieldname": "movement_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Movement Date"
+  },
+  {
+   "fieldname": "from_location",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "From Location",
+   "options": "Location"
+  },
+  {
+   "fieldname": "to_location",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "To Location",
+   "options": "Location"
+  },
+  {
+   "fieldname": "column_break_cmtq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "linked_document_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Linked Document Type",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "handled_by",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "handled By",
+   "options": "User"
+  },
+  {
+   "fieldname": "linked_document",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Linked Document",
+   "options": "linked_document_type"
+  },
+  {
+   "fieldname": "movement_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Current Location",
+   "options": "\nAt Customer Site\nAwaiting Pickup\nPickup\nIn Transit to Workshop\nAt Workshop\nIn Transit to Vendor\nAt Vendor\nIn Transit from Vendor\nReady for Delivery\nDelivery to Customer\nDelivered to Customer\nTransfer\nReturn\nClosed\nOther",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-11-11 05:25:22.862018",
+ "modified_by": "Administrator",
+ "module": "Field Service Management",
+ "name": "Product Movement",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

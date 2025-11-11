@@ -18,6 +18,7 @@
   "column_break_llgp",
   "posting_date",
   "due_date",
+  "amc_contract",
   "column_break_ralr",
   "priority",
   "company",
@@ -45,6 +46,13 @@
   "column_break_33a",
   "total",
   "net_total",
+  "service_spareparts_breakdown_section",
+  "service_item_budget",
+  "service_total",
+  "is_over_budget",
+  "column_break_aouz",
+  "spareparts_item_budget",
+  "spareparts_total",
   "taxes_section",
   "taxes_and_charges",
   "column_break_38",
@@ -743,6 +751,51 @@
    "in_standard_filter": 1,
    "label": "Service Area",
    "options": "Service Area"
+  },
+  {
+   "fieldname": "amc_contract",
+   "fieldtype": "Link",
+   "label": "AMC Contract",
+   "options": "AMC Contract"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "service_spareparts_breakdown_section",
+   "fieldtype": "Section Break",
+   "label": "Service & SpareParts Breakdown"
+  },
+  {
+   "fetch_from": "amc_contract.service_budget",
+   "fieldname": "service_item_budget",
+   "fieldtype": "Currency",
+   "label": "Service Item Budget"
+  },
+  {
+   "fieldname": "service_total",
+   "fieldtype": "Currency",
+   "label": "Service Total"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_over_budget",
+   "fieldtype": "Check",
+   "label": "Is Over Budget",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_aouz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "amc_contract.spare_parts_budget",
+   "fieldname": "spareparts_item_budget",
+   "fieldtype": "Currency",
+   "label": "Spareparts Item Budget"
+  },
+  {
+   "fieldname": "spareparts_total",
+   "fieldtype": "Currency",
+   "label": "SpareParts Total"
   }
  ],
  "index_web_pages_for_search": 1,
@@ -757,7 +810,7 @@
    "link_fieldname": "custom_reference_service_document"
   }
  ],
- "modified": "2025-11-06 04:16:32.427091",
+ "modified": "2025-11-11 02:44:43.222131",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Service Order",
