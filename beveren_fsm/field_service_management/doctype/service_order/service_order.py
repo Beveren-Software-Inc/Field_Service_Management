@@ -182,7 +182,7 @@ class ServiceOrder(Document):
 
 
 @frappe.whitelist()
-def make_stock_entry(service_order: str):
+def make_stock_entry(service_order: str, items=None):
 	order = frappe.get_doc("Service Order", service_order)
 
 	stock_entry = frappe.new_doc("Stock Entry")
@@ -190,23 +190,83 @@ def make_stock_entry(service_order: str):
 	stock_entry.company = order.company
 	stock_entry.posting_date = today()
 	stock_entry.remarks = _("Generated from Service Order {0}").format(order.name)
+	stock_entry.custom_service_order = order.name
 
-	for item in order.items or []:
+	order_item_map = {item.item_code: item for item in order.items or []}
+
+	if items:
+		try:
+			items = frappe.parse_json(items)
+		except Exception:
+			pass
+	else:
+		items = []
+		for item in order.items or []:
+			if getattr(item, "is_service", 0):
+				continue
+			items.append(
+				{
+					"item_code": item.item_code,
+					"qty": item.qty,
+					"max_qty": item.qty,
+					"s_warehouse": item.get("s_warehouse") or item.get("warehouse"),
+					"t_warehouse": item.get("t_warehouse"),
+				}
+			)
+
+	if not items:
+		frappe.throw(_("No stock items available to transfer."))
+
+	selected = []
+	for row in items:
+		item_code = row.get("item_code")
+		if not item_code:
+			continue
+		order_row = order_item_map.get(item_code)
+		if not order_row or getattr(order_row, "is_service", 0):
+			continue
+
+		qty = flt(row.get("qty") or 0)
+		if qty <= 0:
+			continue
+
+		max_qty = flt(row.get("max_qty") or order_row.qty)
+		if qty > max_qty:
+			frappe.throw(_("Quantity for item {0} cannot exceed {1}.").format(item_code, max_qty))
+
+		selected.append(
+			(
+				order_row,
+				{
+					"item_code": item_code,
+					"qty": qty,
+					"s_warehouse": row.get("s_warehouse")
+					or order_row.get("s_warehouse")
+					or order_row.get("warehouse"),
+					"t_warehouse": row.get("t_warehouse") or order_row.get("t_warehouse"),
+				},
+			)
+		)
+
+	if not selected:
+		frappe.throw(_("No stock items were selected for transfer."))
+
+	for order_row, data in selected:
 		stock_entry.append(
 			"items",
 			{
-				"item_code": item.item_code,
-				"item_name": getattr(item, "item_name", None),
-				"description": getattr(item, "description", None),
-				"qty": item.qty,
-				"transfer_qty": item.qty,
-				"uom": getattr(item, "uom", None) or getattr(item, "stock_uom", None),
-				"stock_uom": getattr(item, "stock_uom", None) or getattr(item, "uom", None),
+				"item_code": data["item_code"],
+				"item_name": getattr(order_row, "item_name", None),
+				"description": getattr(order_row, "description", None),
+				"qty": data["qty"],
+				"transfer_qty": data["qty"],
+				"uom": getattr(order_row, "uom", None) or getattr(order_row, "stock_uom", None),
+				"stock_uom": getattr(order_row, "stock_uom", None) or getattr(order_row, "uom", None),
 				"conversion_factor": 1,
 				"sales_order": order.name,
-				"serial_no": getattr(item, "serial_no", None),
-				"s_warehouse": getattr(item, "s_warehouse", None),
-				"t_warehouse": getattr(item, "t_warehouse", None),
+				"serial_no": getattr(order_row, "serial_no", None),
+				"s_warehouse": data.get("s_warehouse"),
+				"t_warehouse": data.get("t_warehouse"),
 			},
 		)
 
@@ -214,7 +274,7 @@ def make_stock_entry(service_order: str):
 
 
 @frappe.whitelist()
-def make_delivery_note(service_order: str):
+def make_delivery_note(service_order: str, items=None):
 	order = frappe.get_doc("Service Order", service_order)
 
 	delivery_note = frappe.new_doc("Delivery Note")
@@ -225,21 +285,79 @@ def make_delivery_note(service_order: str):
 	delivery_note.contact_person = order.customer_contact
 	delivery_note.tc_name = getattr(order, "tc_name", None)
 	delivery_note.terms = getattr(order, "terms", None)
+	delivery_note.custom_service_order = order.name
 
-	for item in order.items or []:
+	order_item_map = {item.item_code: item for item in order.items or []}
+
+	if items:
+		try:
+			items = frappe.parse_json(items)
+		except Exception:
+			pass
+	else:
+		items = []
+		for item in order.items or []:
+			if getattr(item, "is_service", 0):
+				continue
+			items.append(
+				{
+					"item_code": item.item_code,
+					"qty": item.qty,
+					"max_qty": item.qty,
+					"warehouse": item.get("warehouse"),
+				}
+			)
+
+	if not items:
+		frappe.throw(_("No items selected for delivery."))
+
+	selected = []
+	for row in items:
+		item_code = row.get("item_code")
+		if not item_code:
+			continue
+		order_row = order_item_map.get(item_code)
+		if not order_row:
+			continue
+
+		qty = flt(row.get("qty") or 0)
+		if qty <= 0:
+			continue
+
+		max_qty = flt(row.get("max_qty") or order_row.qty)
+		if qty > max_qty:
+			frappe.throw(_("Quantity for item {0} cannot exceed {1}.").format(item_code, max_qty))
+
+		selected.append(
+			(
+				order_row,
+				{
+					"item_code": item_code,
+					"qty": qty,
+					"warehouse": row.get("warehouse") or order_row.get("warehouse"),
+				},
+			)
+		)
+
+	if not selected:
+		frappe.throw(_("No items were selected for delivery."))
+
+	for order_row, data in selected:
 		delivery_note.append(
 			"items",
 			{
-				"item_code": item.item_code,
-				"item_name": getattr(item, "item_name", None),
-				"description": getattr(item, "description", None),
-				"qty": item.qty,
-				"uom": getattr(item, "uom", None),
+				"item_code": data["item_code"],
+				"item_name": getattr(order_row, "item_name", None),
+				"description": getattr(order_row, "description", None),
+				"qty": data["qty"],
+				"uom": getattr(order_row, "uom", None),
 				"conversion_factor": 1,
-				"rate": getattr(item, "rate", None),
-				"amount": getattr(item, "amount", None),
-				"warehouse": getattr(item, "warehouse", None),
-				"serial_no": getattr(item, "serial_no", None),
+				"rate": getattr(order_row, "rate", None),
+				"amount": flt(order_row.rate) * data["qty"]
+				if getattr(order_row, "rate", None) is not None
+				else None,
+				"warehouse": data.get("warehouse"),
+				"serial_no": getattr(order_row, "serial_no", None),
 				"against_sales_order": order.name,
 			},
 		)
@@ -270,6 +388,7 @@ def make_purchase_receipt(service_order: str):
 	purchase_receipt.supplier_address = service_request.customer_address
 	purchase_receipt.tc_name = getattr(order, "tc_name", None)
 	purchase_receipt.terms = getattr(order, "terms", None)
+	purchase_receipt.custom_service_order = order.name
 
 	for item in order.items or []:
 		purchase_receipt.append(
@@ -293,12 +412,252 @@ def make_purchase_receipt(service_order: str):
 
 
 @frappe.whitelist()
+def make_purchase_order(service_order: str, items=None):
+	order = frappe.get_doc("Service Order", service_order)
+
+	if not order.service_request:
+		frappe.throw(_("Service Order {0} is not linked to a Service Request").format(order.name))
+
+	service_request = frappe.get_doc("Service Request", order.service_request)
+
+	if not service_request.repair_vendor:
+		frappe.throw(
+			_("Please set a Repair Vendor on Service Request {0} before creating a Purchase Order.").format(
+				service_request.name
+			)
+		)
+
+	purchase_order = frappe.new_doc("Purchase Order")
+	purchase_order.company = order.company
+	purchase_order.transaction_date = today()
+	purchase_order.schedule_date = today()
+	purchase_order.supplier = service_request.repair_vendor
+	purchase_order.tc_name = getattr(order, "tc_name", None)
+	purchase_order.terms = getattr(order, "terms", None)
+	purchase_order.custom_service_order = order.name
+
+	order_item_map = {item.item_code: item for item in order.items or []}
+
+	if items:
+		try:
+			items = frappe.parse_json(items)
+		except Exception:
+			pass
+	else:
+		items = []
+		for item in order.items or []:
+			items.append(
+				{
+					"item_code": item.item_code,
+					"qty": item.qty,
+					"max_qty": item.qty,
+					"rate": getattr(item, "rate", None),
+					"amount": getattr(item, "amount", None),
+					"warehouse": item.get("warehouse"),
+					"cost_center": item.get("cost_center"),
+				}
+			)
+
+	if not items:
+		frappe.throw(_("No items selected for the Purchase Order."))
+
+	selected = []
+	for row in items:
+		item_code = row.get("item_code")
+		if not item_code:
+			continue
+		order_row = order_item_map.get(item_code)
+		if not order_row:
+			continue
+
+		qty = flt(row.get("qty") or 0)
+		if qty <= 0:
+			continue
+
+		max_qty = flt(row.get("max_qty") or order_row.qty)
+		if qty > max_qty:
+			frappe.throw(_("Quantity for item {0} cannot exceed {1}.").format(item_code, max_qty))
+
+		selected.append(
+			(
+				order_row,
+				{
+					"item_code": item_code,
+					"qty": qty,
+					"rate": flt(
+						row.get("rate") if row.get("rate") is not None else getattr(order_row, "rate", 0)
+					),
+					"amount": flt(row.get("amount") if row.get("amount") is not None else 0),
+					"warehouse": row.get("warehouse") or order_row.get("warehouse"),
+					"cost_center": row.get("cost_center") or order_row.get("cost_center"),
+				},
+			)
+		)
+
+	if not selected:
+		frappe.throw(_("No items were selected for the Purchase Order."))
+
+	for order_row, data in selected:
+		rate = data.get("rate", 0)
+		if rate == 0 and getattr(order_row, "rate", None):
+			rate = flt(order_row.rate)
+		amount = data.get("amount")
+		if not amount:
+			amount = rate * data["qty"]
+
+		_po_item = purchase_order.append(
+			"items",
+			{
+				"item_code": data["item_code"],
+				"item_name": getattr(order_row, "item_name", None),
+				"description": getattr(order_row, "description", None),
+				"qty": data["qty"],
+				"schedule_date": today(),
+				"uom": getattr(order_row, "uom", None),
+				"stock_uom": getattr(order_row, "stock_uom", None) or getattr(order_row, "uom", None),
+				"conversion_factor": 1,
+				"rate": rate,
+				"amount": amount,
+				"warehouse": data.get("warehouse"),
+				"cost_center": data.get("cost_center"),
+			},
+		)
+
+	return purchase_order.as_dict()
+
+
+@frappe.whitelist()
+def make_purchase_invoice(service_order: str, items=None):
+	order = frappe.get_doc("Service Order", service_order)
+
+	if not order.service_request:
+		frappe.throw(_("Service Order {0} is not linked to a Service Request").format(order.name))
+
+	service_request = frappe.get_doc("Service Request", order.service_request)
+
+	if not service_request.repair_vendor:
+		frappe.throw(
+			_("Please set a Repair Vendor on Service Request {0} before creating a Purchase Invoice.").format(
+				service_request.name
+			)
+		)
+
+	purchase_invoice = frappe.new_doc("Purchase Invoice")
+	purchase_invoice.company = order.company
+	purchase_invoice.posting_date = today()
+	purchase_invoice.supplier = service_request.repair_vendor
+	purchase_invoice.tc_name = getattr(order, "tc_name", None)
+	purchase_invoice.terms = getattr(order, "terms", None)
+	purchase_invoice.custom_service_order = order.name
+
+	order_item_map = {item.item_code: item for item in order.items or []}
+
+	if items:
+		try:
+			items = frappe.parse_json(items)
+		except Exception:
+			pass
+	else:
+		items = []
+		for item in order.items or []:
+			items.append(
+				{
+					"item_code": item.item_code,
+					"qty": item.qty,
+					"max_qty": item.qty,
+					"rate": getattr(item, "rate", None),
+					"amount": getattr(item, "amount", None),
+					"warehouse": item.get("warehouse"),
+					"cost_center": item.get("cost_center"),
+					"expense_account": item.get("expense_account"),
+				}
+			)
+
+	if not items:
+		frappe.throw(_("No items selected for the Purchase Invoice."))
+
+	default_expense_account = frappe.get_cached_value("Company", order.company, "default_expense_account")
+
+	selected = []
+	for row in items:
+		item_code = row.get("item_code")
+		if not item_code:
+			continue
+		order_row = order_item_map.get(item_code)
+		if not order_row:
+			continue
+
+		qty = flt(row.get("qty") or 0)
+		if qty <= 0:
+			continue
+
+		max_qty = flt(row.get("max_qty") or order_row.qty)
+		if qty > max_qty:
+			frappe.throw(_("Quantity for item {0} cannot exceed {1}.").format(item_code, max_qty))
+
+		selected.append(
+			(
+				order_row,
+				{
+					"item_code": item_code,
+					"qty": qty,
+					"rate": flt(
+						row.get("rate") if row.get("rate") is not None else getattr(order_row, "rate", 0)
+					),
+					"amount": flt(row.get("amount") if row.get("amount") is not None else 0),
+					"warehouse": row.get("warehouse") or order_row.get("warehouse"),
+					"cost_center": row.get("cost_center") or order_row.get("cost_center"),
+					"expense_account": row.get("expense_account")
+					or order_row.get("expense_account")
+					or default_expense_account,
+				},
+			)
+		)
+
+	if not selected:
+		frappe.throw(_("No items were selected for the Purchase Invoice."))
+
+	if not default_expense_account:
+		# Ensure we have one before iterating
+		default_expense_account = frappe.get_cached_value("Company", order.company, "default_expense_account")
+
+	for order_row, data in selected:
+		rate = data.get("rate", 0)
+		if rate == 0 and getattr(order_row, "rate", None):
+			rate = flt(order_row.rate)
+		amount = data.get("amount")
+		if not amount:
+			amount = rate * data["qty"]
+
+		expense_account = data.get("expense_account")
+		if not expense_account:
+			frappe.throw(_("Please set an Expense Account for item {0}.").format(data["item_code"]))
+
+		_pi_item = purchase_invoice.append(
+			"items",
+			{
+				"item_code": data["item_code"],
+				"item_name": getattr(order_row, "item_name", None),
+				"description": getattr(order_row, "description", None),
+				"qty": data["qty"],
+				"uom": getattr(order_row, "uom", None),
+				"conversion_factor": 1,
+				"rate": rate,
+				"amount": amount,
+				"warehouse": data.get("warehouse"),
+				"cost_center": data.get("cost_center"),
+				"expense_account": expense_account,
+			},
+		)
+
+	return purchase_invoice.as_dict()
+
+
+@frappe.whitelist()
 def record_product_movement(
 	service_order: str,
 	movement_type: str,
 	movement_date: str | None = None,
-	from_location: str | None = None,
-	to_location: str | None = None,
 	linked_document_type: str | None = None,
 	linked_document: str | None = None,
 ):
@@ -315,8 +674,6 @@ def record_product_movement(
 	row = {
 		"movement_type": movement_type,
 		"movement_date": movement_date or today(),
-		"from_location": from_location,
-		"to_location": to_location,
 		"handled_by": frappe.session.user,
 	}
 
@@ -326,8 +683,8 @@ def record_product_movement(
 
 	entry = service_request.append("product_movement", row)
 
-	if to_location:
-		service_request.current_product_location = to_location
+	# Movement type doubles as our location indicator now.
+	service_request.current_product_location = movement_type
 
 	service_request.save(ignore_permissions=True)
 

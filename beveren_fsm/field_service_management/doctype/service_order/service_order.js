@@ -1,24 +1,21 @@
-const MOVEMENT_TYPE_OPTIONS = [
-  "Pickup",
-  "Transfer",
-  "Send To Vendor",
-  "Receive From Vendor",
-  "Delivery To Customer",
-  "Return",
-  "Other",
-];
-
-const LOCATION_OPTIONS = [
+const MOVEMENT_OPTIONS = [
   "At Customer Site",
   "Awaiting Pickup",
+  "Pickup",
   "In Transit to Workshop",
   "At Workshop",
   "In Transit to Vendor",
+  "Send To Vendor",
   "At Vendor",
+  "Receive From Vendor",
   "In Transit from Vendor",
   "Ready for Delivery",
+  "Delivery to Customer",
   "Delivered to Customer",
+  "Transfer",
+  "Return",
   "Closed",
+  "Other",
 ];
 
 // Ensure this namespace exists
@@ -131,6 +128,16 @@ frappe.ui.form.on("Service Order", {
       frm.add_custom_button(
         __("Purchase Receipt"),
         () => frm.events.create_purchase_receipt(frm),
+        __("Create")
+      );
+      frm.add_custom_button(
+        __("Purchase Order"),
+        () => frm.events.create_purchase_order(frm),
+        __("Create")
+      );
+      frm.add_custom_button(
+        __("Purchase Invoice"),
+        () => frm.events.create_purchase_invoice(frm),
         __("Create")
       );
       cur_frm.page.set_inner_btn_group_as_primary(__("Create"));
@@ -411,6 +418,20 @@ frappe.ui.form.on("Service Order", {
         "beveren_fsm.field_service_management.doctype.service_order.service_order.make_purchase_receipt",
     });
   },
+  create_purchase_order(frm) {
+    frm.events.open_logistics_dialog(frm, {
+      doc_type: "Purchase Order",
+      method:
+        "beveren_fsm.field_service_management.doctype.service_order.service_order.make_purchase_order",
+    });
+  },
+  create_purchase_invoice(frm) {
+    frm.events.open_logistics_dialog(frm, {
+      doc_type: "Purchase Invoice",
+      method:
+        "beveren_fsm.field_service_management.doctype.service_order.service_order.make_purchase_invoice",
+    });
+  },
   open_logistics_dialog(frm, config) {
     if (!frm.doc.name) {
       frappe.throw(
@@ -418,47 +439,415 @@ frappe.ui.form.on("Service Order", {
       );
     }
 
+    let stockItems = [];
+    let deliveryItems = [];
+    let purchaseItems = [];
+    const orderItems = frm.doc.items || [];
+
+    if (config.doc_type === "Stock Entry") {
+      stockItems = orderItems.filter((item) => !item.is_service);
+      if (!stockItems.length) {
+        frappe.msgprint(__("No stock items are available to transfer."));
+        return;
+      }
+    }
+
+    if (config.doc_type === "Delivery Note") {
+      deliveryItems = orderItems.filter((item) => !item.is_service);
+      if (!deliveryItems.length) {
+        frappe.msgprint(__("No deliverable items are available."));
+        return;
+      }
+    }
+
+    if (
+      config.doc_type === "Purchase Order" ||
+      config.doc_type === "Purchase Invoice"
+    ) {
+      purchaseItems = orderItems.map((item) => ({
+        include_item: 1,
+        item_code: item.item_code,
+        item_name: item.item_name,
+        qty: item.qty,
+        max_qty: item.qty,
+        rate: item.rate,
+        amount:
+          (typeof item.rate === "number"
+            ? item.rate
+            : parseFloat(item.rate) || 0) *
+          (typeof item.qty === "number" ? item.qty : parseFloat(item.qty) || 0),
+        warehouse: item.warehouse || "",
+        cost_center: item.cost_center || "",
+        expense_account: item.expense_account || "",
+      }));
+      if (!purchaseItems.length) {
+        frappe.msgprint(__("No items are available for purchasing."));
+        return;
+      }
+    }
+
+    const fields = [
+      {
+        fieldname: "movement_type",
+        fieldtype: "Select",
+        label: __("Movement Type"),
+        options: ["", ...MOVEMENT_OPTIONS].join("\n"),
+        reqd: 1,
+      },
+      {
+        fieldname: "movement_date",
+        fieldtype: "Date",
+        label: __("Movement Date"),
+        default: frappe.datetime.get_today(),
+        reqd: 1,
+      },
+    ];
+
+    if (config.doc_type === "Stock Entry") {
+      fields.push({
+        fieldname: "stock_items",
+        fieldtype: "Table",
+        label: __("Items to Transfer"),
+        options: "Service Order Item",
+        in_place_edit: true,
+        reqd: 1,
+        fields: [
+          {
+            fieldname: "include_item",
+            fieldtype: "Check",
+            label: __("Include"),
+            default: 1,
+            in_list_view: 1,
+            width: "60px",
+          },
+          {
+            fieldname: "item_code",
+            label: __("Item Code"),
+            fieldtype: "Link",
+            options: "Item",
+            in_list_view: 1,
+            read_only: 1,
+          },
+          {
+            fieldname: "item_name",
+            label: __("Item Name"),
+            fieldtype: "Data",
+            in_list_view: 1,
+            read_only: 1,
+          },
+          {
+            fieldname: "qty",
+            label: __("Quantity"),
+            fieldtype: "Float",
+            in_list_view: 1,
+          },
+          {
+            fieldname: "max_qty",
+            label: __("Max Quantity"),
+            fieldtype: "Float",
+            read_only: 1,
+            hidden: 1,
+          },
+          {
+            fieldname: "s_warehouse",
+            label: __("Source Warehouse"),
+            fieldtype: "Link",
+            options: "Warehouse",
+            in_list_view: 1,
+          },
+          {
+            fieldname: "t_warehouse",
+            label: __("Target Warehouse"),
+            fieldtype: "Link",
+            options: "Warehouse",
+            in_list_view: 1,
+          },
+        ],
+      });
+    }
+
+    if (config.doc_type === "Delivery Note") {
+      fields.push({
+        fieldname: "delivery_items",
+        fieldtype: "Table",
+        label: __("Items to Deliver"),
+        options: "Service Order Item",
+        in_place_edit: true,
+        reqd: 1,
+        fields: [
+          {
+            fieldname: "include_item",
+            fieldtype: "Check",
+            label: __("Include"),
+            default: 1,
+            in_list_view: 1,
+            width: "60px",
+          },
+          {
+            fieldname: "item_code",
+            label: __("Item Code"),
+            fieldtype: "Link",
+            options: "Item",
+            in_list_view: 1,
+            read_only: 1,
+          },
+          {
+            fieldname: "item_name",
+            label: __("Item Name"),
+            fieldtype: "Data",
+            in_list_view: 1,
+            read_only: 1,
+          },
+          {
+            fieldname: "qty",
+            label: __("Quantity"),
+            fieldtype: "Float",
+            in_list_view: 1,
+          },
+          {
+            fieldname: "max_qty",
+            label: __("Max Quantity"),
+            fieldtype: "Float",
+            read_only: 1,
+            hidden: 1,
+          },
+          {
+            fieldname: "warehouse",
+            label: __("Warehouse"),
+            fieldtype: "Link",
+            options: "Warehouse",
+            in_list_view: 1,
+          },
+          {
+            fieldname: "rate",
+            label: __("Rate"),
+            fieldtype: "Currency",
+            read_only: 1,
+            in_list_view: 1,
+          },
+          {
+            fieldname: "amount",
+            label: __("Amount"),
+            fieldtype: "Currency",
+            read_only: 1,
+            in_list_view: 1,
+          },
+        ],
+      });
+    }
+
+    if (
+      config.doc_type === "Purchase Order" ||
+      config.doc_type === "Purchase Invoice"
+    ) {
+      fields.push({
+        fieldname: "purchase_items",
+        fieldtype: "Table",
+        label: __("Items to Purchase"),
+        options: "Service Order Item",
+        in_place_edit: true,
+        reqd: 1,
+        fields: [
+          {
+            fieldname: "include_item",
+            fieldtype: "Check",
+            label: __("Include"),
+            default: 1,
+            in_list_view: 1,
+            width: "60px",
+          },
+          {
+            fieldname: "item_code",
+            label: __("Item Code"),
+            fieldtype: "Link",
+            options: "Item",
+            in_list_view: 1,
+            read_only: 1,
+          },
+          {
+            fieldname: "item_name",
+            label: __("Item Name"),
+            fieldtype: "Data",
+            in_list_view: 1,
+            read_only: 1,
+          },
+          {
+            fieldname: "qty",
+            label: __("Quantity"),
+            fieldtype: "Float",
+            in_list_view: 1,
+          },
+          {
+            fieldname: "max_qty",
+            label: __("Max Quantity"),
+            fieldtype: "Float",
+            read_only: 1,
+            hidden: 1,
+          },
+          {
+            fieldname: "rate",
+            label: __("Rate"),
+            fieldtype: "Currency",
+            in_list_view: 1,
+          },
+          {
+            fieldname: "amount",
+            label: __("Amount"),
+            fieldtype: "Currency",
+            read_only: 1,
+            in_list_view: 1,
+          },
+          {
+            fieldname: "warehouse",
+            label: __("Warehouse"),
+            fieldtype: "Link",
+            options: "Warehouse",
+            in_list_view: 1,
+          },
+          {
+            fieldname: "cost_center",
+            label: __("Cost Center"),
+            fieldtype: "Link",
+            options: "Cost Center",
+            hidden: 1,
+          },
+          {
+            fieldname: "expense_account",
+            label: __("Expense Account"),
+            fieldtype: "Link",
+            options: "Account",
+            hidden: 1,
+          },
+        ],
+      });
+    }
+
     const dialog = new frappe.ui.Dialog({
       title: __("Create {0}", [config.doc_type]),
-      fields: [
-        {
-          fieldname: "movement_type",
-          fieldtype: "Select",
-          label: __("Movement Type"),
-          options: ["", ...MOVEMENT_TYPE_OPTIONS].join("\n"),
-          reqd: 1,
-        },
-        {
-          fieldname: "movement_date",
-          fieldtype: "Date",
-          label: __("Movement Date"),
-          default: frappe.datetime.get_today(),
-          reqd: 1,
-        },
-        {
-          fieldname: "from_location",
-          fieldtype: "Select",
-          label: __("From Location"),
-          options: ["", ...LOCATION_OPTIONS].join("\n"),
-          reqd: 0,
-        },
-        {
-          fieldname: "to_location",
-          fieldtype: "Select",
-          label: __("To Location"),
-          options: ["", ...LOCATION_OPTIONS].join("\n"),
-          reqd: 1,
-        },
-      ],
+      fields,
       primary_action_label: __("Continue"),
       primary_action(values) {
         dialog.disable_primary_action();
+
+        const methodArgs = {
+          service_order: frm.doc.name,
+        };
+
+        let selectedItems = [];
+        if (config.doc_type === "Stock Entry") {
+          const tableField = dialog.get_field("stock_items");
+          const tableData = (tableField.df.data || []).filter(
+            (row) => row.include_item
+          );
+
+          if (!tableData.length) {
+            dialog.enable_primary_action();
+            frappe.throw(__("Select at least one item to transfer."));
+          }
+
+          tableData.forEach((row) => {
+            if (row.max_qty && row.qty > row.max_qty) {
+              dialog.enable_primary_action();
+              frappe.throw(
+                __(
+                  "Quantity for item {0} exceeds the available quantity ({1}).",
+                  [row.item_code, row.max_qty]
+                )
+              );
+            }
+          });
+
+          selectedItems = tableData.map((row) => ({
+            item_code: row.item_code,
+            qty: row.qty,
+            max_qty: row.max_qty,
+            s_warehouse: row.s_warehouse,
+            t_warehouse: row.t_warehouse,
+          }));
+
+          methodArgs.items = selectedItems;
+        }
+
+        if (config.doc_type === "Delivery Note") {
+          const tableField = dialog.get_field("delivery_items");
+          const tableData = (tableField.df.data || []).filter(
+            (row) => row.include_item
+          );
+
+          if (!tableData.length) {
+            dialog.enable_primary_action();
+            frappe.throw(__("Select at least one item to deliver."));
+          }
+
+          tableData.forEach((row) => {
+            if (row.max_qty && row.qty > row.max_qty) {
+              dialog.enable_primary_action();
+              frappe.throw(
+                __(
+                  "Quantity for item {0} exceeds the available quantity ({1}).",
+                  [row.item_code, row.max_qty]
+                )
+              );
+            }
+          });
+
+          selectedItems = tableData.map((row) => ({
+            item_code: row.item_code,
+            qty: row.qty,
+            max_qty: row.max_qty,
+            warehouse: row.warehouse,
+          }));
+
+          methodArgs.items = selectedItems;
+        }
+
+        if (
+          config.doc_type === "Purchase Order" ||
+          config.doc_type === "Purchase Invoice"
+        ) {
+          const tableField = dialog.get_field("purchase_items");
+          const tableData = (tableField.df.data || []).filter(
+            (row) => row.include_item
+          );
+
+          if (!tableData.length) {
+            dialog.enable_primary_action();
+            frappe.throw(__("Select at least one item to purchase."));
+          }
+
+          tableData.forEach((row) => {
+            if (row.max_qty && row.qty > row.max_qty) {
+              dialog.enable_primary_action();
+              frappe.throw(
+                __(
+                  "Quantity for item {0} exceeds the available quantity ({1}).",
+                  [row.item_code, row.max_qty]
+                )
+              );
+            }
+            const qty = parseFloat(row.qty) || 0;
+            const rate = parseFloat(row.rate) || 0;
+            row.amount = rate * qty;
+          });
+
+          selectedItems = tableData.map((row) => ({
+            item_code: row.item_code,
+            qty: row.qty,
+            max_qty: row.max_qty,
+            rate: row.rate,
+            amount: row.amount,
+            warehouse: row.warehouse,
+            cost_center: row.cost_center,
+            expense_account: row.expense_account,
+          }));
+
+          methodArgs.items = selectedItems;
+        }
+
         let docname = null;
         frappe.call({
           method: config.method,
-          args: {
-            service_order: frm.doc.name,
-          },
+          args: methodArgs,
           callback(r) {
             dialog.enable_primary_action();
             if (r.exc) {
@@ -477,8 +866,6 @@ frappe.ui.form.on("Service Order", {
               service_order: frm.doc.name,
               movement_type: values.movement_type,
               movement_date: values.movement_date,
-              from_location: values.from_location,
-              to_location: values.to_location,
             };
 
             if (docname) {
@@ -514,6 +901,44 @@ frappe.ui.form.on("Service Order", {
         dialog.hide();
       },
     });
+
+    if (config.doc_type === "Stock Entry") {
+      const tableField = dialog.get_field("stock_items");
+      tableField.df.data = stockItems.map((item) => ({
+        include_item: 1,
+        item_code: item.item_code,
+        item_name: item.item_name,
+        qty: item.qty,
+        max_qty: item.qty,
+        s_warehouse: item.s_warehouse || item.warehouse || "",
+        t_warehouse: item.t_warehouse || "",
+      }));
+      tableField.grid.refresh();
+    }
+
+    if (config.doc_type === "Delivery Note") {
+      const tableField = dialog.get_field("delivery_items");
+      tableField.df.data = deliveryItems.map((item) => ({
+        include_item: 1,
+        item_code: item.item_code,
+        item_name: item.item_name,
+        qty: item.qty,
+        max_qty: item.qty,
+        warehouse: item.warehouse || "",
+        rate: item.rate,
+        amount: item.amount,
+      }));
+      tableField.grid.refresh();
+    }
+
+    if (
+      config.doc_type === "Purchase Order" ||
+      config.doc_type === "Purchase Invoice"
+    ) {
+      const tableField = dialog.get_field("purchase_items");
+      tableField.df.data = purchaseItems;
+      tableField.grid.refresh();
+    }
 
     dialog.show();
   },

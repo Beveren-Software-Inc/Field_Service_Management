@@ -336,6 +336,7 @@
    "options": "Supplier"
   },
   {
+   "allow_on_submit": 1,
    "default": "At Customer Site",
    "fieldname": "current_product_location",
    "fieldtype": "Select",
@@ -348,6 +349,7 @@
    "label": "Movement Tracker"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "product_movement",
    "fieldtype": "Table",
    "label": "Product Movement",
@@ -366,7 +368,7 @@
    "link_fieldname": "service_request"
   }
  ],
- "modified": "2025-11-11 05:23:44.412626",
+ "modified": "2025-11-11 05:38:33.411473",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Service Request",

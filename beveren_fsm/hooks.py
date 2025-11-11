@@ -20,6 +20,30 @@ app_license = "mit"
 # 		"has_permission": "beveren_fsm.api.permission.has_app_permission"
 # 	}
 # ]
+fixtures = [
+	# Export your custom "Service Type" doctype
+	"Service Type",
+	# Export the "Service" Workspace only
+	{"dt": "Workspace", "filters": {"name": "Service"}},
+	# Export specific Custom Fields related to Service Order links
+	{
+		"doctype": "Custom Field",
+		"filters": [
+			[
+				"name",
+				"in",
+				[
+					"Purchase Order-custom_service_order",
+					"Purchase Invoice-custom_service_order",
+					"Purchase Receipt-custom_service_order",
+					"Stock Entry-custom_service_order",
+					"Delivery Note-custom_service_order",
+				],
+			]
+		],
+	},
+]
+
 
 # Includes in <head>
 # ------------------
@@ -48,7 +72,7 @@ app_license = "mit"
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
 # bench --site fsm.local export-fixtures
-fixtures = ["Service Type", {"dt": "Workspace", "filters": {"name": "Service"}}]
+# fixtures = ["Service Type", {"dt": "Workspace", "filters": {"name": "Service"}}]
 
 # Svg Icons
 # ------------------
