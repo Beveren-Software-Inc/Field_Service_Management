@@ -51,6 +51,7 @@
    "fieldtype": "Tab Break",
    "label": "Service Details"
   },
+
   {
    "fieldname": "services_section",
    "fieldtype": "Section Break",

@@ -22,7 +22,6 @@
   "company",
   "service_category",
   "repair_vendor",
-  "amc_contract",
   "accounting_dimensions_section",
   "cost_center",
   "column_break_digf",
@@ -41,6 +40,7 @@
   "item_name",
   "column_break_mgix",
   "warranty_amc_status",
+  "amc_contract",
   "warranty_expiry_date",
   "amc_expiry_date",
   "appointment_preference_section",
@@ -337,11 +337,11 @@
   },
   {
    "allow_on_submit": 1,
-   "default": "At Customer Site",
+   "default": "Customer Site",
    "fieldname": "current_product_location",
-   "fieldtype": "Select",
+   "fieldtype": "Link",
    "label": "Current Product Location",
-   "options": "\nAt Customer Site\nAwaiting Pickup\nPickup\nIn Transit to Workshop\nAt Workshop\nIn Transit to Vendor\nAt Vendor\nIn Transit from Vendor\nReceive From Vendor\nReady for Delivery\nDelivery to Customer\nDelivered to Customer\nTransfer\nReturn\nClosed\nOther"
+   "options": "Product Location"
   },
   {
    "fieldname": "section_break_mzqv",
@@ -368,7 +368,7 @@
    "link_fieldname": "service_request"
   }
  ],
- "modified": "2025-11-11 06:18:32.425922",
+ "modified": "2025-11-11 09:43:36.514917",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Service Request",

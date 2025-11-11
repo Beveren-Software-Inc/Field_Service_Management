@@ -1,0 +1,65 @@
+[
+ {
+  "docstatus": 0,
+  "doctype": "Product Location",
+  "modified": "2025-11-11 09:22:37.445125",
+  "name": "Customer Site",
+  "product_location": "Customer Site"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Product Location",
+  "modified": "2025-11-11 09:23:08.330051",
+  "name": "Awaiting Pickup",
+  "product_location": "Awaiting Pickup"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Product Location",
+  "modified": "2025-11-11 09:23:20.587555",
+  "name": "In Transit to Workshop",
+  "product_location": "In Transit to Workshop"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Product Location",
+  "modified": "2025-11-11 09:23:31.722164",
+  "name": "At Workshop",
+  "product_location": "At Workshop"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Product Location",
+  "modified": "2025-11-11 09:25:26.537696",
+  "name": "Sent to Vendor",
+  "product_location": "Sent to Vendor"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Product Location",
+  "modified": "2025-11-11 09:25:38.466999",
+  "name": "Receive from Vendor",
+  "product_location": "Receive from Vendor"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Product Location",
+  "modified": "2025-11-11 09:26:13.087179",
+  "name": "Delivered to Customer",
+  "product_location": "Delivered to Customer"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Product Location",
+  "modified": "2025-11-11 09:26:22.036735",
+  "name": "Closed",
+  "product_location": "Closed"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Product Location",
+  "modified": "2025-11-11 09:29:27.362227",
+  "name": "Ready for Delivery",
+  "product_location": "Ready for Delivery"
+ }
+]

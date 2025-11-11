@@ -23,6 +23,7 @@ app_license = "mit"
 fixtures = [
 	# Export your custom "Service Type" doctype
 	"Service Type",
+	"Product Location",
 	# Export the "Service" Workspace only
 	# {"dt": "Workspace", "filters": {"name": "Service"}},
 	# Export specific Custom Fields related to Service Order links

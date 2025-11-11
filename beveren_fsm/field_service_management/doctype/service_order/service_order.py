@@ -725,13 +725,15 @@ def make_purchase_invoice(service_order: str, items=None):
 @frappe.whitelist()
 def record_product_movement(
 	service_order: str,
-	movement_type: str,
+	movement_type: str | None = None,
 	movement_date: str | None = None,
 	linked_document_type: str | None = None,
 	linked_document: str | None = None,
+	product_location: str | None = None,
 ):
-	if not movement_type:
-		frappe.throw(_("Movement type is required"))
+	location = product_location or movement_type
+	if not location:
+		frappe.throw(_("Product location is required"))
 
 	order = frappe.get_doc("Service Order", service_order)
 
@@ -741,7 +743,7 @@ def record_product_movement(
 	service_request = frappe.get_doc("Service Request", order.service_request)
 
 	row = {
-		"movement_type": movement_type,
+		"movement_type": location,
 		"movement_date": movement_date or today(),
 		"handled_by": frappe.session.user,
 	}
@@ -753,7 +755,7 @@ def record_product_movement(
 	entry = service_request.append("product_movement", row)
 
 	# Movement type doubles as our location indicator now.
-	service_request.current_product_location = movement_type
+	service_request.current_product_location = location
 
 	service_request.save(ignore_permissions=True)
 

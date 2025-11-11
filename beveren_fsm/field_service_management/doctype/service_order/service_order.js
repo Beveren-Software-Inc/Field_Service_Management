@@ -1,23 +1,3 @@
-const MOVEMENT_OPTIONS = [
-  "At Customer Site",
-  "Awaiting Pickup",
-  "Pickup",
-  "In Transit to Workshop",
-  "At Workshop",
-  "In Transit to Vendor",
-  "Send To Vendor",
-  "At Vendor",
-  "Receive From Vendor",
-  "In Transit from Vendor",
-  "Ready for Delivery",
-  "Delivery to Customer",
-  "Delivered to Customer",
-  "Transfer",
-  "Return",
-  "Closed",
-  "Other",
-];
-
 // Ensure this namespace exists
 frappe.provide("beveren_fsm.field_service_management");
 
@@ -515,10 +495,10 @@ frappe.ui.form.on("Service Order", {
 
     const fields = [
       {
-        fieldname: "movement_type",
-        fieldtype: "Select",
-        label: __("Movement Type"),
-        options: ["", ...MOVEMENT_OPTIONS].join("\n"),
+        fieldname: "product_location",
+        fieldtype: "Link",
+        label: __("Product Location"),
+        options: "Product Location",
         reqd: 1,
       },
       {
@@ -823,6 +803,13 @@ frappe.ui.form.on("Service Order", {
       fields,
       primary_action_label: __("Continue"),
       primary_action(values) {
+        const productLocation =
+          values.product_location || values.movement_type || null;
+        if (!productLocation) {
+          frappe.msgprint(__("Please select a Product Location."));
+          return;
+        }
+
         dialog.disable_primary_action();
 
         const methodArgs = {
@@ -999,7 +986,8 @@ frappe.ui.form.on("Service Order", {
 
             const movementArgs = {
               service_order: frm.doc.name,
-              movement_type: values.movement_type,
+              product_location: productLocation,
+              movement_type: productLocation,
               movement_date: values.movement_date,
             };
 
