@@ -283,6 +283,7 @@
   "translatable": 0,
   "unique": 0,
   "width": null
+
  },
  {
   "allow_in_quick_entry": 0,
@@ -568,5 +569,6 @@
   "translatable": 0,
   "unique": 0,
   "width": null
+
  }
 ]
