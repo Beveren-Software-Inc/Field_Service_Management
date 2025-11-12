@@ -56,9 +56,10 @@ frappe.ui.form.on("Service Order", {
     // 	);
     // }
     if (frm.doc.docstatus === 1 && !frm.is_dirty()) {
-      const isReviewStatus = frm.doc.status === "Review";
+      const isReviewOrCompleted =
+        frm.doc.status === "Review" || frm.doc.status === "Completed";
 
-      if (!isReviewStatus) {
+      if (!isReviewOrCompleted) {
         if (
           ![
             "Scheduled",
