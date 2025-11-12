@@ -181,7 +181,32 @@ doc_events = {
 			"beveren_fsm.field_service_management.fsm_utils.update_invoice_status",
 			"beveren_fsm.field_service_management.fsm_utils.update_per_billed_status",
 		],
-	}
+	},
+	"Delivery Note": {
+		"on_submit": [
+			"beveren_fsm.field_service_management.doctype.service_order.service_order.update_product_movement_on_submit",
+		],
+	},
+	"Purchase Order": {
+		"on_submit": [
+			"beveren_fsm.field_service_management.doctype.service_order.service_order.update_product_movement_on_submit",
+		],
+	},
+	"Purchase Receipt": {
+		"on_submit": [
+			"beveren_fsm.field_service_management.doctype.service_order.service_order.update_product_movement_on_submit",
+		],
+	},
+	"Purchase Invoice": {
+		"on_submit": [
+			"beveren_fsm.field_service_management.doctype.service_order.service_order.update_product_movement_on_submit",
+		],
+	},
+	"Stock Entry": {
+		"on_submit": [
+			"beveren_fsm.field_service_management.doctype.service_order.service_order.update_product_movement_on_submit",
+		],
+	},
 }
 
 # Scheduled Tasks

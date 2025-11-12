@@ -23,6 +23,7 @@
   "priority",
   "company",
   "amended_from",
+  "current_product_location",
   "accounting_dimensions_section",
   "cost_center",
   "column_break_ekul",
@@ -796,6 +797,14 @@
    "fieldname": "spareparts_total",
    "fieldtype": "Currency",
    "label": "SpareParts Total"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "current_product_location",
+   "fieldtype": "Link",
+   "label": "Current Product Location",
+   "options": "Product Location",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
@@ -810,7 +819,7 @@
    "link_fieldname": "custom_reference_service_document"
   }
  ],
- "modified": "2025-11-11 02:44:43.222131",
+ "modified": "2025-11-12 03:31:42.698792",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Service Order",

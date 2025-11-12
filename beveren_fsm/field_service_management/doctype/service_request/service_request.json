@@ -353,7 +353,8 @@
    "fieldname": "product_movement",
    "fieldtype": "Table",
    "label": "Product Movement",
-   "options": "Product Movement"
+   "options": "Product Movement",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
@@ -368,7 +369,7 @@
    "link_fieldname": "service_request"
   }
  ],
- "modified": "2025-11-11 09:43:36.514917",
+ "modified": "2025-11-12 03:47:46.091331",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Service Request",

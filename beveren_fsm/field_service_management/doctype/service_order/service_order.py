@@ -182,7 +182,7 @@ class ServiceOrder(Document):
 
 
 @frappe.whitelist()
-def make_stock_entry(service_order: str, items=None):
+def make_stock_entry(service_order: str, items=None, product_location: str | None = None):
 	order = frappe.get_doc("Service Order", service_order)
 
 	stock_entry = frappe.new_doc("Stock Entry")
@@ -191,6 +191,8 @@ def make_stock_entry(service_order: str, items=None):
 	stock_entry.posting_date = today()
 	stock_entry.remarks = _("Generated from Service Order {0}").format(order.name)
 	stock_entry.custom_service_order = order.name
+	if product_location:
+		stock_entry.custom_current_product_location = product_location
 
 	order_item_map = {item.item_code: item for item in order.items or []}
 
@@ -274,7 +276,7 @@ def make_stock_entry(service_order: str, items=None):
 
 
 @frappe.whitelist()
-def make_delivery_note(service_order: str, items=None):
+def make_delivery_note(service_order: str, items=None, product_location: str | None = None):
 	order = frappe.get_doc("Service Order", service_order)
 
 	delivery_note = frappe.new_doc("Delivery Note")
@@ -286,6 +288,8 @@ def make_delivery_note(service_order: str, items=None):
 	delivery_note.tc_name = getattr(order, "tc_name", None)
 	delivery_note.terms = getattr(order, "terms", None)
 	delivery_note.custom_service_order = order.name
+	if product_location:
+		delivery_note.custom_current_product_location = product_location
 
 	order_item_map = {item.item_code: item for item in order.items or []}
 
@@ -343,6 +347,17 @@ def make_delivery_note(service_order: str, items=None):
 		frappe.throw(_("No items were selected for delivery."))
 
 	for order_row, data in selected:
+		# Get stock_uom from order_row or fetch from Item if not available
+		stock_uom = getattr(order_row, "stock_uom", None)
+		if not stock_uom:
+			# Fetch from Item master if not in order_row
+			try:
+				item_doc = frappe.get_cached_doc("Item", data["item_code"])
+				stock_uom = item_doc.stock_uom
+			except Exception:
+				# Fallback to uom if stock_uom not found
+				stock_uom = getattr(order_row, "uom", None) or "Nos"
+
 		delivery_note.append(
 			"items",
 			{
@@ -350,7 +365,8 @@ def make_delivery_note(service_order: str, items=None):
 				"item_name": getattr(order_row, "item_name", None),
 				"description": getattr(order_row, "description", None),
 				"qty": data["qty"],
-				"uom": getattr(order_row, "uom", None),
+				"uom": getattr(order_row, "uom", None) or stock_uom,
+				"stock_uom": stock_uom,
 				"conversion_factor": 1,
 				"rate": getattr(order_row, "rate", None),
 				"amount": flt(order_row.rate) * data["qty"]
@@ -358,7 +374,6 @@ def make_delivery_note(service_order: str, items=None):
 				else None,
 				"warehouse": data.get("warehouse"),
 				"serial_no": getattr(order_row, "serial_no", None),
-				"against_sales_order": order.name,
 			},
 		)
 
@@ -366,7 +381,7 @@ def make_delivery_note(service_order: str, items=None):
 
 
 @frappe.whitelist()
-def make_purchase_receipt(service_order: str, items=None):
+def make_purchase_receipt(service_order: str, items=None, product_location: str | None = None):
 	order = frappe.get_doc("Service Order", service_order)
 
 	if not order.service_request:
@@ -389,6 +404,8 @@ def make_purchase_receipt(service_order: str, items=None):
 	purchase_receipt.tc_name = getattr(order, "tc_name", None)
 	purchase_receipt.terms = getattr(order, "terms", None)
 	purchase_receipt.custom_service_order = order.name
+	if product_location:
+		purchase_receipt.custom_current_product_location = product_location
 
 	order_item_map = {item.item_code: item for item in order.items or []}
 
@@ -481,7 +498,7 @@ def make_purchase_receipt(service_order: str, items=None):
 
 
 @frappe.whitelist()
-def make_purchase_order(service_order: str, items=None):
+def make_purchase_order(service_order: str, items=None, product_location: str | None = None):
 	order = frappe.get_doc("Service Order", service_order)
 
 	if not order.service_request:
@@ -504,6 +521,8 @@ def make_purchase_order(service_order: str, items=None):
 	purchase_order.tc_name = getattr(order, "tc_name", None)
 	purchase_order.terms = getattr(order, "terms", None)
 	purchase_order.custom_service_order = order.name
+	if product_location:
+		purchase_order.custom_current_product_location = product_location
 
 	order_item_map = {item.item_code: item for item in order.items or []}
 
@@ -596,7 +615,7 @@ def make_purchase_order(service_order: str, items=None):
 
 
 @frappe.whitelist()
-def make_purchase_invoice(service_order: str, items=None):
+def make_purchase_invoice(service_order: str, items=None, product_location: str | None = None):
 	order = frappe.get_doc("Service Order", service_order)
 
 	if not order.service_request:
@@ -618,6 +637,8 @@ def make_purchase_invoice(service_order: str, items=None):
 	purchase_invoice.tc_name = getattr(order, "tc_name", None)
 	purchase_invoice.terms = getattr(order, "terms", None)
 	purchase_invoice.custom_service_order = order.name
+	if product_location:
+		purchase_invoice.custom_current_product_location = product_location
 
 	order_item_map = {item.item_code: item for item in order.items or []}
 
@@ -754,12 +775,70 @@ def record_product_movement(
 
 	entry = service_request.append("product_movement", row)
 
-	# Movement type doubles as our location indicator now.
+	# Update current_product_location on Service Request
 	service_request.current_product_location = location
 
+	# Update current_product_location on Service Order
+	order.current_product_location = location
+
+	# If location is "Delivered to Customer", update Service Order status to "Completed"
+	if location == "Delivered to Customer":
+		order.status = "Completed"
+
 	service_request.save(ignore_permissions=True)
+	order.save(ignore_permissions=True)
 
 	return entry.name
+
+
+def update_product_movement_on_submit(doc, method):
+	"""
+	Update product movement entry with linked document information on submit.
+	This is called from doc_events hooks when documents are submitted.
+	"""
+	# Check if document has custom_current_product_location and custom_service_order
+	if not hasattr(doc, "custom_current_product_location") or not doc.custom_current_product_location:
+		return
+
+	if not hasattr(doc, "custom_service_order") or not doc.custom_service_order:
+		return
+
+	# Get Service Order
+	try:
+		order = frappe.get_doc("Service Order", doc.custom_service_order)
+	except frappe.DoesNotExistError:
+		return
+
+	# Get Service Request
+	if not order.service_request:
+		return
+
+	try:
+		service_request = frappe.get_doc("Service Request", order.service_request)
+	except frappe.DoesNotExistError:
+		return
+
+	# Find the product movement entry that matches the location and doesn't have linked_document
+	product_location = doc.custom_current_product_location
+
+	# Find matching entry without linked_document
+	matching_entry = None
+	for entry in service_request.product_movement:
+		if entry.movement_type == product_location and not entry.linked_document:
+			matching_entry = entry
+			break
+
+	if matching_entry:
+		# Update the entry with linked document information
+		matching_entry.linked_document_type = doc.doctype
+		matching_entry.linked_document = doc.name
+
+		service_request.save(ignore_permissions=True)
+
+	# If location is "Delivered to Customer", update Service Order status to "Completed"
+	if product_location == "Deliver to Customer":
+		order.status = "Review"
+		order.save(ignore_permissions=True)
 
 
 @frappe.whitelist()

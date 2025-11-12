@@ -493,6 +493,18 @@ frappe.ui.form.on("Service Order", {
       }
     }
 
+    // Map document types to default Product Location values
+    const defaultProductLocations = {
+      "Delivery Note": "Deliver to Customer",
+      "Purchase Receipt": "Receive from Vendor",
+      "Purchase Invoice": "Receive from Vendor",
+      "Purchase Order": "Sent to Vendor",
+      "Stock Entry": "Receive From Customer",
+    };
+
+    const defaultProductLocation =
+      defaultProductLocations[config.doc_type] || "";
+
     const fields = [
       {
         fieldname: "product_location",
@@ -500,6 +512,7 @@ frappe.ui.form.on("Service Order", {
         label: __("Product Location"),
         options: "Product Location",
         reqd: 1,
+        default: defaultProductLocation,
       },
       {
         fieldname: "movement_date",
@@ -814,6 +827,7 @@ frappe.ui.form.on("Service Order", {
 
         const methodArgs = {
           service_order: frm.doc.name,
+          product_location: productLocation,
         };
 
         let selectedItems = [];
@@ -877,6 +891,8 @@ frappe.ui.form.on("Service Order", {
           selectedItems = tableData.map((row) => ({
             item_code: row.item_code,
             qty: row.qty,
+            uom: row.uom,
+            stock_uom: row.stock_uom,
             max_qty: row.max_qty,
             warehouse: row.warehouse,
           }));
@@ -1070,6 +1086,16 @@ frappe.ui.form.on("Service Order", {
     }
 
     dialog.show();
+
+    // Set the default Product Location value after dialog is shown
+    if (defaultProductLocation) {
+      setTimeout(() => {
+        const productLocationField = dialog.get_field("product_location");
+        if (productLocationField) {
+          productLocationField.set_value(defaultProductLocation);
+        }
+      }, 100);
+    }
   },
   before_submit(frm) {
     if (!frm.doc.is_over_budget || frm.__over_budget_confirmed) {

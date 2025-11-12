@@ -6,7 +6,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "product_location"
+  "product_location",
+  "destination"
  ],
  "fields": [
   {
@@ -17,12 +18,19 @@
    "label": "Product Location",
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "fieldname": "destination",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Destination"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-11 09:21:33.155391",
+ "modified": "2025-11-12 04:07:46.697596",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Product Location",
