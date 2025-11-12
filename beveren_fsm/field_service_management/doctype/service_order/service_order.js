@@ -56,71 +56,78 @@ frappe.ui.form.on("Service Order", {
     // 	);
     // }
     if (frm.doc.docstatus === 1 && !frm.is_dirty()) {
-      if (
-        ![
-          "Scheduled",
-          "Dispatched",
-          "In Progress",
-          "Completed",
-          "Review",
-        ].includes(frm.doc.status)
-      ) {
-        frm.add_custom_button(
-          __("Service Appointment"),
-          () => {
-            frm.trigger("make_appointment_from_order");
-          },
-          __("Create")
-        );
-      }
-      // Enable Invoice on Condition
-      let items = frm.doc.items || [];
-      let non_invoiced_items = [];
-      items.forEach((item) => {
-        let invoiced_qty = item.invoiced_qty || 0;
-        let remaining_qty = item.qty - invoiced_qty;
-        if (remaining_qty > 0) {
-          non_invoiced_items.push({
-            item_code: item.item_code,
-          });
-        }
-      });
+      const isReviewStatus = frm.doc.status === "Review";
 
-      if (non_invoiced_items.length) {
+      if (!isReviewStatus) {
+        if (
+          ![
+            "Scheduled",
+            "Dispatched",
+            "In Progress",
+            "Completed",
+            "Review",
+          ].includes(frm.doc.status)
+        ) {
+          frm.add_custom_button(
+            __("Service Appointment"),
+            () => {
+              frm.trigger("make_appointment_from_order");
+            },
+            __("Create")
+          );
+        }
+        // Enable Invoice on Condition
+        let items = frm.doc.items || [];
+        let non_invoiced_items = [];
+        items.forEach((item) => {
+          let invoiced_qty = item.invoiced_qty || 0;
+          let remaining_qty = item.qty - invoiced_qty;
+          if (remaining_qty > 0) {
+            non_invoiced_items.push({
+              item_code: item.item_code,
+            });
+          }
+        });
+
+        if (non_invoiced_items.length) {
+          frm.add_custom_button(
+            __("Sales Invoice"),
+            () => {
+              frm.trigger("create_service_invoice");
+            },
+            __("Create")
+          );
+        }
         frm.add_custom_button(
-          __("Sales Invoice"),
-          () => {
-            frm.trigger("create_service_invoice");
-          },
+          __("Stock Entry"),
+          () => frm.events.create_stock_entry(frm),
           __("Create")
         );
+        frm.add_custom_button(
+          __("Delivery Note"),
+          () => frm.events.create_delivery_note(frm),
+          __("Create")
+        );
+        frm.add_custom_button(
+          __("Purchase Receipt"),
+          () => frm.events.create_purchase_receipt(frm),
+          __("Create")
+        );
+        frm.add_custom_button(
+          __("Purchase Order"),
+          () => frm.events.create_purchase_order(frm),
+          __("Create")
+        );
+        frm.add_custom_button(
+          __("Purchase Invoice"),
+          () => frm.events.create_purchase_invoice(frm),
+          __("Create")
+        );
+        cur_frm.page.set_inner_btn_group_as_primary(__("Create"));
+      } else {
+        frm.clear_custom_buttons();
+        frm.trigger("hide_create_icon_buttons");
       }
-      frm.add_custom_button(
-        __("Stock Entry"),
-        () => frm.events.create_stock_entry(frm),
-        __("Create")
-      );
-      frm.add_custom_button(
-        __("Delivery Note"),
-        () => frm.events.create_delivery_note(frm),
-        __("Create")
-      );
-      frm.add_custom_button(
-        __("Purchase Receipt"),
-        () => frm.events.create_purchase_receipt(frm),
-        __("Create")
-      );
-      frm.add_custom_button(
-        __("Purchase Order"),
-        () => frm.events.create_purchase_order(frm),
-        __("Create")
-      );
-      frm.add_custom_button(
-        __("Purchase Invoice"),
-        () => frm.events.create_purchase_invoice(frm),
-        __("Create")
-      );
-      cur_frm.page.set_inner_btn_group_as_primary(__("Create"));
     }
 
     // Complete Button
@@ -225,6 +232,22 @@ frappe.ui.form.on("Service Order", {
       $('.open-notification[title="Open Service Appointment"]').hide();
       $('.icon-btn[data-doctype="Service Appointment"]').hide();
     }
+  },
+  hide_create_icon_buttons: (frm) => {
+    const doctypesToHide = [
+      "Service Appointment",
+      "Sales Invoice",
+      "Stock Entry",
+      "Delivery Note",
+      "Purchase Receipt",
+      "Purchase Order",
+      "Purchase Invoice",
+    ];
+
+    doctypesToHide.forEach((doctype) => {
+      $(`.open-notification[title="Open ${doctype}"]`).hide();
+      $(`.icon-btn[data-doctype="${doctype}"]`).hide();
+    });
   },
   make_appointment_from_order: (frm) => {
     frappe.model.open_mapped_doc({
@@ -423,7 +446,54 @@ frappe.ui.form.on("Service Order", {
     let deliveryItems = [];
     let purchaseReceiptItems = [];
     let purchaseItems = [];
-    const orderItems = frm.doc.items || [];
+    let orderItems = [...(frm.doc.items || [])];
+
+    const primaryItemCode = (frm.doc.item_code || "").trim();
+    if (primaryItemCode) {
+      const primaryItemIndex = orderItems.findIndex(
+        (item) => (item.item_code || "").trim() === primaryItemCode
+      );
+
+      if (primaryItemIndex > 0) {
+        const [primaryItem] = orderItems.splice(primaryItemIndex, 1);
+        orderItems.unshift(primaryItem);
+      } else if (primaryItemIndex === -1) {
+        orderItems.unshift({
+          item_code: primaryItemCode,
+          item_name: frm.doc.item_name || primaryItemCode,
+          description: frm.doc.description || "",
+          qty: 1,
+          max_qty: 1,
+          rate: 0,
+          amount: 0,
+          warehouse: frm.doc.warehouse || "",
+          s_warehouse: frm.doc.warehouse || "",
+          t_warehouse: "",
+          cost_center: frm.doc.cost_center || "",
+          expense_account: "",
+          is_service: 0,
+          serial_no: frm.doc.serial_no || "",
+          uom: frm.doc.uom || frm.doc.stock_uom || "",
+          stock_uom: frm.doc.stock_uom || frm.doc.uom || "",
+        });
+      }
+    }
+
+    if (
+      primaryItemCode &&
+      orderItems.length &&
+      (orderItems[0].item_code || "").trim() === primaryItemCode
+    ) {
+      if (frm.doc.serial_no && !orderItems[0].serial_no) {
+        orderItems[0].serial_no = frm.doc.serial_no;
+      }
+      if (!orderItems[0].uom) {
+        orderItems[0].uom = frm.doc.uom || frm.doc.stock_uom || "";
+      }
+      if (!orderItems[0].stock_uom) {
+        orderItems[0].stock_uom = frm.doc.stock_uom || frm.doc.uom || "";
+      }
+    }
 
     if (config.doc_type === "Stock Entry") {
       stockItems = orderItems.filter((item) => !item.is_service);
@@ -551,6 +621,13 @@ frappe.ui.form.on("Service Order", {
           {
             fieldname: "item_name",
             label: __("Item Name"),
+            fieldtype: "Data",
+            in_list_view: 1,
+            read_only: 1,
+          },
+          {
+            fieldname: "serial_no",
+            label: __("Serial No"),
             fieldtype: "Data",
             in_list_view: 1,
             read_only: 1,
@@ -833,9 +910,19 @@ frappe.ui.form.on("Service Order", {
         let selectedItems = [];
         if (config.doc_type === "Stock Entry") {
           const tableField = dialog.get_field("stock_items");
-          const tableData = (tableField.df.data || []).filter(
+          let tableData = (tableField.df.data || []).filter(
             (row) => row.include_item
           );
+
+          // Auto-select if only one item remains
+          if (!tableData.length && (tableField.df.data || []).length === 1) {
+            const firstRow = tableField.df.data[0];
+            if (firstRow) {
+              firstRow.include_item = 1;
+              tableField.grid.refresh();
+              tableData = [firstRow];
+            }
+          }
 
           if (!tableData.length) {
             dialog.enable_primary_action();
@@ -860,6 +947,7 @@ frappe.ui.form.on("Service Order", {
             max_qty: row.max_qty,
             s_warehouse: row.s_warehouse,
             t_warehouse: row.t_warehouse,
+            serial_no: row.serial_no,
           }));
 
           methodArgs.items = selectedItems;
@@ -867,9 +955,18 @@ frappe.ui.form.on("Service Order", {
 
         if (config.doc_type === "Delivery Note") {
           const tableField = dialog.get_field("delivery_items");
-          const tableData = (tableField.df.data || []).filter(
+          let tableData = (tableField.df.data || []).filter(
             (row) => row.include_item
           );
+
+          if (!tableData.length && (tableField.df.data || []).length === 1) {
+            const firstRow = tableField.df.data[0];
+            if (firstRow) {
+              firstRow.include_item = 1;
+              tableField.grid.refresh();
+              tableData = [firstRow];
+            }
+          }
 
           if (!tableData.length) {
             dialog.enable_primary_action();
@@ -890,11 +987,12 @@ frappe.ui.form.on("Service Order", {
 
           selectedItems = tableData.map((row) => ({
             item_code: row.item_code,
-            qty: row.qty,
-            uom: row.uom,
-            stock_uom: row.stock_uom,
+            qty: parseFloat(row.qty) || 0,
+            uom: row.uom || row.stock_uom || null,
+            stock_uom: row.stock_uom || row.uom || null,
             max_qty: row.max_qty,
             warehouse: row.warehouse,
+            serial_no: row.serial_no || frm.doc.serial_no || "",
           }));
 
           methodArgs.items = selectedItems;
@@ -902,9 +1000,19 @@ frappe.ui.form.on("Service Order", {
 
         if (config.doc_type === "Purchase Receipt") {
           const tableField = dialog.get_field("purchase_receipt_items");
-          const tableData = (tableField.df.data || []).filter(
+          let tableData = (tableField.df.data || []).filter(
             (row) => row.include_item
           );
+
+          // Auto-select if only one item remains
+          if (!tableData.length && (tableField.df.data || []).length === 1) {
+            const firstRow = tableField.df.data[0];
+            if (firstRow) {
+              firstRow.include_item = 1;
+              tableField.grid.refresh();
+              tableData = [firstRow];
+            }
+          }
 
           if (!tableData.length) {
             dialog.enable_primary_action();
@@ -944,9 +1052,19 @@ frappe.ui.form.on("Service Order", {
           config.doc_type === "Purchase Invoice"
         ) {
           const tableField = dialog.get_field("purchase_items");
-          const tableData = (tableField.df.data || []).filter(
+          let tableData = (tableField.df.data || []).filter(
             (row) => row.include_item
           );
+
+          // Auto-select if only one item remains
+          if (!tableData.length && (tableField.df.data || []).length === 1) {
+            const firstRow = tableField.df.data[0];
+            if (firstRow) {
+              firstRow.include_item = 1;
+              tableField.grid.refresh();
+              tableData = [firstRow];
+            }
+          }
 
           if (!tableData.length) {
             dialog.enable_primary_action();
@@ -1051,6 +1169,7 @@ frappe.ui.form.on("Service Order", {
         max_qty: item.qty,
         s_warehouse: item.s_warehouse || item.warehouse || "",
         t_warehouse: item.t_warehouse || "",
+        serial_no: item.serial_no || "",
       }));
       tableField.grid.refresh();
     }
@@ -1066,6 +1185,9 @@ frappe.ui.form.on("Service Order", {
         warehouse: item.warehouse || "",
         rate: item.rate,
         amount: item.amount,
+        serial_no: item.serial_no || "",
+        uom: item.uom || item.stock_uom || "",
+        stock_uom: item.stock_uom || item.uom || "",
       }));
       tableField.grid.refresh();
     }

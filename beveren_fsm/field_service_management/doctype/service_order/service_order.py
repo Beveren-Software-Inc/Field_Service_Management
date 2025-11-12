@@ -7,6 +7,30 @@ from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt, today
 
+LOCATION_STATUS_MAP = {
+	"delivered to customer": "Completed",
+	"deliver to customer": "Completed",  # fallback for legacy value
+	"receive from vendor": "In Progress",
+	"receive from customer": "In Progress",
+	"received from customer": "In Progress",
+	"sent to vendor": "In Progress",
+	"send to vendor": "In Progress",
+}
+
+
+def _set_status_from_location(order, location):
+	if not location:
+		return False
+
+	normalized_location = location.strip().lower()
+	new_status = LOCATION_STATUS_MAP.get(normalized_location)
+
+	if new_status and order.status != new_status:
+		order.status = new_status
+		return True
+
+	return False
+
 
 class ServiceOrder(Document):
 	def validate(self):
@@ -186,7 +210,11 @@ def make_stock_entry(service_order: str, items=None, product_location: str | Non
 	order = frappe.get_doc("Service Order", service_order)
 
 	stock_entry = frappe.new_doc("Stock Entry")
-	stock_entry.stock_entry_type = "Material Transfer"
+	location = (product_location or "").strip().lower()
+	if location == "receive from customer":
+		stock_entry.stock_entry_type = "Material Receipt"
+	else:
+		stock_entry.stock_entry_type = "Material Transfer"
 	stock_entry.company = order.company
 	stock_entry.posting_date = today()
 	stock_entry.remarks = _("Generated from Service Order {0}").format(order.name)
@@ -225,14 +253,39 @@ def make_stock_entry(service_order: str, items=None, product_location: str | Non
 		if not item_code:
 			continue
 		order_row = order_item_map.get(item_code)
-		if not order_row or getattr(order_row, "is_service", 0):
+
+		# If item not in order.items, it might be the primary item from header
+		# Create a minimal order_row object for it
+		if not order_row:
+			# Check if this is the primary item from Service Order header
+			if order.item_code == item_code:
+				# Create a minimal order_row-like object
+				class MinimalOrderRow:
+					def __init__(self, order):
+						self.item_code = order.item_code
+						self.item_name = getattr(order, "item_name", None) or item_code
+						self.description = getattr(order, "description", None)
+						self.uom = getattr(order, "uom", None)
+						self.stock_uom = getattr(order, "stock_uom", None)
+						self.serial_no = getattr(order, "serial_no", None)
+						self.is_service = 0
+
+					def get(self, key, default=None):
+						return getattr(self, key, default)
+
+				order_row = MinimalOrderRow(order)
+			else:
+				# Item not found and not primary item, skip it
+				continue
+
+		if getattr(order_row, "is_service", 0):
 			continue
 
 		qty = flt(row.get("qty") or 0)
 		if qty <= 0:
 			continue
 
-		max_qty = flt(row.get("max_qty") or order_row.qty)
+		max_qty = flt(row.get("max_qty") or getattr(order_row, "qty", 1))
 		if qty > max_qty:
 			frappe.throw(_("Quantity for item {0} cannot exceed {1}.").format(item_code, max_qty))
 
@@ -243,9 +296,11 @@ def make_stock_entry(service_order: str, items=None, product_location: str | Non
 					"item_code": item_code,
 					"qty": qty,
 					"s_warehouse": row.get("s_warehouse")
-					or order_row.get("s_warehouse")
-					or order_row.get("warehouse"),
-					"t_warehouse": row.get("t_warehouse") or order_row.get("t_warehouse"),
+					or getattr(order_row, "s_warehouse", None)
+					or getattr(order_row, "warehouse", None)
+					or getattr(order, "warehouse", None),
+					"t_warehouse": row.get("t_warehouse") or getattr(order_row, "t_warehouse", None),
+					"serial_no": row.get("serial_no") or getattr(order_row, "serial_no", None),
 				},
 			)
 		)
@@ -254,6 +309,28 @@ def make_stock_entry(service_order: str, items=None, product_location: str | Non
 		frappe.throw(_("No stock items were selected for transfer."))
 
 	for order_row, data in selected:
+		# Get serial_no from row data or order_row
+		serial_no = data.get("serial_no") or getattr(order_row, "serial_no", None)
+
+		# Get uom and stock_uom from order_row or fetch from Item master
+		uom = getattr(order_row, "uom", None)
+		stock_uom = getattr(order_row, "stock_uom", None)
+
+		if not stock_uom or not uom:
+			# Fetch from Item master if not available
+			try:
+				item_doc = frappe.get_cached_doc("Item", data["item_code"])
+				if not stock_uom:
+					stock_uom = item_doc.stock_uom
+				if not uom:
+					uom = item_doc.stock_uom  # Default to stock_uom if uom not set
+			except Exception:
+				# Fallback values
+				if not stock_uom:
+					stock_uom = uom or "Nos"
+				if not uom:
+					uom = stock_uom or "Nos"
+
 		stock_entry.append(
 			"items",
 			{
@@ -262,11 +339,11 @@ def make_stock_entry(service_order: str, items=None, product_location: str | Non
 				"description": getattr(order_row, "description", None),
 				"qty": data["qty"],
 				"transfer_qty": data["qty"],
-				"uom": getattr(order_row, "uom", None) or getattr(order_row, "stock_uom", None),
-				"stock_uom": getattr(order_row, "stock_uom", None) or getattr(order_row, "uom", None),
+				"uom": uom or stock_uom,
+				"stock_uom": stock_uom or uom,
 				"conversion_factor": 1,
 				"sales_order": order.name,
-				"serial_no": getattr(order_row, "serial_no", None),
+				"serial_no": serial_no,
 				"s_warehouse": data.get("s_warehouse"),
 				"t_warehouse": data.get("t_warehouse"),
 			},
@@ -322,7 +399,23 @@ def make_delivery_note(service_order: str, items=None, product_location: str | N
 			continue
 		order_row = order_item_map.get(item_code)
 		if not order_row:
-			continue
+			primary_item_code = (order.item_code or "").strip()
+			if primary_item_code and primary_item_code == (item_code or "").strip():
+				order_row = frappe._dict(
+					{
+						"item_code": order.item_code,
+						"item_name": order.item_name,
+						"description": getattr(order, "description", None),
+						"qty": 1,
+						"uom": row.get("uom") or getattr(order, "uom", None),
+						"stock_uom": row.get("stock_uom") or getattr(order, "stock_uom", None),
+						"rate": row.get("rate"),
+						"warehouse": row.get("warehouse") or getattr(order, "warehouse", None),
+						"serial_no": row.get("serial_no") or getattr(order, "serial_no", None),
+					}
+				)
+			else:
+				continue
 
 		qty = flt(row.get("qty") or 0)
 		if qty <= 0:
@@ -339,6 +432,9 @@ def make_delivery_note(service_order: str, items=None, product_location: str | N
 					"item_code": item_code,
 					"qty": qty,
 					"warehouse": row.get("warehouse") or order_row.get("warehouse"),
+					"serial_no": row.get("serial_no") or order_row.get("serial_no"),
+					"uom": row.get("uom") or order_row.get("uom"),
+					"stock_uom": row.get("stock_uom") or order_row.get("stock_uom"),
 				},
 			)
 		)
@@ -365,15 +461,15 @@ def make_delivery_note(service_order: str, items=None, product_location: str | N
 				"item_name": getattr(order_row, "item_name", None),
 				"description": getattr(order_row, "description", None),
 				"qty": data["qty"],
-				"uom": getattr(order_row, "uom", None) or stock_uom,
-				"stock_uom": stock_uom,
+				"uom": data.get("uom") or getattr(order_row, "uom", None) or stock_uom,
+				"stock_uom": data.get("stock_uom") or stock_uom,
 				"conversion_factor": 1,
 				"rate": getattr(order_row, "rate", None),
 				"amount": flt(order_row.rate) * data["qty"]
 				if getattr(order_row, "rate", None) is not None
 				else None,
 				"warehouse": data.get("warehouse"),
-				"serial_no": getattr(order_row, "serial_no", None),
+				"serial_no": data.get("serial_no") or getattr(order_row, "serial_no", None),
 			},
 		)
 
@@ -488,7 +584,6 @@ def make_purchase_receipt(service_order: str, items=None, product_location: str 
 				"conversion_factor": 1,
 				"rate": rate,
 				"amount": amount,
-				"sales_order": order.name,
 				"warehouse": data.get("warehouse"),
 				"serial_no": getattr(order_row, "serial_no", None),
 			},
@@ -781,9 +876,7 @@ def record_product_movement(
 	# Update current_product_location on Service Order
 	order.current_product_location = location
 
-	# If location is "Delivered to Customer", update Service Order status to "Completed"
-	if location == "Delivered to Customer":
-		order.status = "Completed"
+	_set_status_from_location(order, location)
 
 	service_request.save(ignore_permissions=True)
 	order.save(ignore_permissions=True)
@@ -835,9 +928,7 @@ def update_product_movement_on_submit(doc, method):
 
 		service_request.save(ignore_permissions=True)
 
-	# If location is "Delivered to Customer", update Service Order status to "Completed"
-	if product_location == "Deliver to Customer":
-		order.status = "Review"
+	if _set_status_from_location(order, product_location):
 		order.save(ignore_permissions=True)
 
 
