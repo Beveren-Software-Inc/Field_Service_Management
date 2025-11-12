@@ -1,65 +1,58 @@
 [
  {
+  "destination": "Customer Site",
   "docstatus": 0,
   "doctype": "Product Location",
-  "modified": "2025-11-11 09:22:37.445125",
+  "modified": "2025-11-12 04:12:03.943008",
   "name": "Customer Site",
   "product_location": "Customer Site"
  },
  {
+  "destination": "Workshop",
   "docstatus": 0,
   "doctype": "Product Location",
-  "modified": "2025-11-11 09:23:08.330051",
-  "name": "Awaiting Pickup",
-  "product_location": "Awaiting Pickup"
- },
- {
-  "docstatus": 0,
-  "doctype": "Product Location",
-  "modified": "2025-11-11 09:23:20.587555",
+  "modified": "2025-11-12 04:11:55.779221",
   "name": "In Transit to Workshop",
   "product_location": "In Transit to Workshop"
  },
  {
+  "destination": "Vendor Location",
   "docstatus": 0,
   "doctype": "Product Location",
-  "modified": "2025-11-11 09:23:31.722164",
-  "name": "At Workshop",
-  "product_location": "At Workshop"
- },
- {
-  "docstatus": 0,
-  "doctype": "Product Location",
-  "modified": "2025-11-11 09:25:26.537696",
+  "modified": "2025-11-12 04:11:37.453540",
   "name": "Sent to Vendor",
   "product_location": "Sent to Vendor"
  },
  {
+  "destination": "Workshop",
   "docstatus": 0,
   "doctype": "Product Location",
-  "modified": "2025-11-11 09:25:38.466999",
+  "modified": "2025-11-12 04:11:29.452520",
   "name": "Receive from Vendor",
   "product_location": "Receive from Vendor"
  },
  {
+  "destination": "Customer Site",
   "docstatus": 0,
   "doctype": "Product Location",
-  "modified": "2025-11-11 09:26:13.087179",
-  "name": "Delivered to Customer",
-  "product_location": "Delivered to Customer"
+  "modified": "2025-11-12 04:10:54.700385",
+  "name": "Deliver to Customer",
+  "product_location": "Deliver to Customer"
  },
  {
+  "destination": "Customer Site",
   "docstatus": 0,
   "doctype": "Product Location",
-  "modified": "2025-11-11 09:26:22.036735",
+  "modified": "2025-11-12 04:11:05.186353",
   "name": "Closed",
   "product_location": "Closed"
  },
  {
+  "destination": "Workshop",
   "docstatus": 0,
   "doctype": "Product Location",
-  "modified": "2025-11-11 09:29:27.362227",
-  "name": "Ready for Delivery",
-  "product_location": "Ready for Delivery"
+  "modified": "2025-11-12 04:07:33.679322",
+  "name": "Receive From Customer",
+  "product_location": "Receive From Customer"
  }
 ]
