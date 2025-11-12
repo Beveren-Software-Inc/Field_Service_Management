@@ -534,6 +534,7 @@ frappe.ui.form.on("Service Order", {
           warehouse: item.warehouse || "",
           rate,
           amount: rate * qty,
+          serial_no: item.serial_no || "",
         };
       });
     }
@@ -557,6 +558,7 @@ frappe.ui.form.on("Service Order", {
         warehouse: item.warehouse || "",
         cost_center: item.cost_center || "",
         expense_account: item.expense_account || "",
+        serial_no: item.serial_no || "",
       }));
       if (!purchaseItems.length) {
         frappe.msgprint(__("No items are available for purchasing."));
@@ -1043,6 +1045,7 @@ frappe.ui.form.on("Service Order", {
             warehouse: row.warehouse,
             rate: row.rate,
             amount: row.amount,
+            serial_no: row.serial_no,
           }));
 
           methodArgs.items = selectedItems;
@@ -1096,6 +1099,7 @@ frappe.ui.form.on("Service Order", {
             warehouse: row.warehouse,
             cost_center: row.cost_center,
             expense_account: row.expense_account,
+            serial_no: row.serial_no,
           }));
 
           methodArgs.items = selectedItems;

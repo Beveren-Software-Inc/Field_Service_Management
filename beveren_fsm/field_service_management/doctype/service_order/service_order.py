@@ -485,12 +485,12 @@ def make_purchase_receipt(service_order: str, items=None, product_location: str 
 
 	service_request = frappe.get_doc("Service Request", order.service_request)
 
-	if not service_request.repair_vendor:
-		frappe.throw(
-			_("Please set a Repair Vendor on Service Request {0} before creating a Purchase Receipt.").format(
-				service_request.name
-			)
-		)
+	# if not service_request.repair_vendor:
+	# 	frappe.throw(
+	# 		_("Please set a Repair Vendor on Service Request {0} before creating a Purchase Receipt.").format(
+	# 			service_request.name
+	# 		)
+	# 	)
 
 	purchase_receipt = frappe.new_doc("Purchase Receipt")
 	purchase_receipt.company = order.company
@@ -535,14 +535,38 @@ def make_purchase_receipt(service_order: str, items=None, product_location: str 
 		if not item_code:
 			continue
 		order_row = order_item_map.get(item_code)
+
+		# If item not in order.items, it might be the primary item from header
+		# Create a minimal order_row object for it
 		if not order_row:
-			continue
+			# Check if this is the primary item from Service Order header
+			if order.item_code == item_code:
+				# Create a minimal order_row-like object
+				class MinimalOrderRow:
+					def __init__(self, order):
+						self.item_code = order.item_code
+						self.item_name = getattr(order, "item_name", None) or item_code
+						self.description = getattr(order, "description", None)
+						self.uom = getattr(order, "uom", None)
+						self.stock_uom = getattr(order, "stock_uom", None)
+						self.serial_no = getattr(order, "serial_no", None)
+						self.is_service = 0
+						self.qty = 1
+						self.rate = 0
+
+					def get(self, key, default=None):
+						return getattr(self, key, default)
+
+				order_row = MinimalOrderRow(order)
+			else:
+				# Item not found and not primary item, skip it
+				continue
 
 		qty = flt(row.get("qty") or 0)
 		if qty <= 0:
 			continue
 
-		max_qty = flt(row.get("max_qty") or order_row.qty)
+		max_qty = flt(row.get("max_qty") or getattr(order_row, "qty", 1))
 		if qty > max_qty:
 			frappe.throw(_("Quantity for item {0} cannot exceed {1}.").format(item_code, max_qty))
 
@@ -556,7 +580,12 @@ def make_purchase_receipt(service_order: str, items=None, product_location: str 
 						row.get("rate") if row.get("rate") is not None else getattr(order_row, "rate", 0)
 					),
 					"amount": flt(row.get("amount") if row.get("amount") is not None else 0),
-					"warehouse": row.get("warehouse") or order_row.get("warehouse"),
+					"warehouse": row.get("warehouse")
+					or getattr(order_row, "warehouse", None)
+					or getattr(order, "warehouse", None),
+					"serial_no": row.get("serial_no") or getattr(order_row, "serial_no", None),
+					"uom": row.get("uom") or getattr(order_row, "uom", None),
+					"stock_uom": row.get("stock_uom") or getattr(order_row, "stock_uom", None),
 				},
 			)
 		)
@@ -572,6 +601,28 @@ def make_purchase_receipt(service_order: str, items=None, product_location: str 
 		if not amount:
 			amount = rate * data["qty"]
 
+		# Get serial_no from row data or order_row
+		serial_no = data.get("serial_no") or getattr(order_row, "serial_no", None)
+
+		# Get uom and stock_uom from data, order_row, or fetch from Item master
+		uom = data.get("uom") or getattr(order_row, "uom", None)
+		stock_uom = data.get("stock_uom") or getattr(order_row, "stock_uom", None)
+
+		if not stock_uom or not uom:
+			# Fetch from Item master if not available
+			try:
+				item_doc = frappe.get_cached_doc("Item", data["item_code"])
+				if not stock_uom:
+					stock_uom = item_doc.stock_uom
+				if not uom:
+					uom = item_doc.stock_uom  # Default to stock_uom if uom not set
+			except Exception:
+				# Fallback values
+				if not stock_uom:
+					stock_uom = uom or "Nos"
+				if not uom:
+					uom = stock_uom or "Nos"
+
 		purchase_receipt.append(
 			"items",
 			{
@@ -579,13 +630,13 @@ def make_purchase_receipt(service_order: str, items=None, product_location: str 
 				"item_name": getattr(order_row, "item_name", None),
 				"description": getattr(order_row, "description", None),
 				"qty": data["qty"],
-				"uom": getattr(order_row, "uom", None),
-				"stock_uom": getattr(order_row, "stock_uom", None) or getattr(order_row, "uom", None),
+				"uom": uom or stock_uom,
+				"stock_uom": stock_uom or uom,
 				"conversion_factor": 1,
 				"rate": rate,
 				"amount": amount,
 				"warehouse": data.get("warehouse"),
-				"serial_no": getattr(order_row, "serial_no", None),
+				"serial_no": serial_no,
 			},
 		)
 
@@ -601,12 +652,12 @@ def make_purchase_order(service_order: str, items=None, product_location: str | 
 
 	service_request = frappe.get_doc("Service Request", order.service_request)
 
-	if not service_request.repair_vendor:
-		frappe.throw(
-			_("Please set a Repair Vendor on Service Request {0} before creating a Purchase Order.").format(
-				service_request.name
-			)
-		)
+	# if not service_request.repair_vendor:
+	# 	frappe.throw(
+	# 		_("Please set a Repair Vendor on Service Request {0} before creating a Purchase Order.").format(
+	# 			service_request.name
+	# 		)
+	# 	)
 
 	purchase_order = frappe.new_doc("Purchase Order")
 	purchase_order.company = order.company
@@ -650,14 +701,38 @@ def make_purchase_order(service_order: str, items=None, product_location: str | 
 		if not item_code:
 			continue
 		order_row = order_item_map.get(item_code)
+
+		# If item not in order.items, it might be the primary item from header
+		# Create a minimal order_row object for it
 		if not order_row:
-			continue
+			# Check if this is the primary item from Service Order header
+			if order.item_code == item_code:
+				# Create a minimal order_row-like object
+				class MinimalOrderRow:
+					def __init__(self, order):
+						self.item_code = order.item_code
+						self.item_name = getattr(order, "item_name", None) or item_code
+						self.description = getattr(order, "description", None)
+						self.uom = getattr(order, "uom", None)
+						self.stock_uom = getattr(order, "stock_uom", None)
+						self.serial_no = getattr(order, "serial_no", None)
+						self.is_service = 0
+						self.qty = 1
+						self.rate = 0
+
+					def get(self, key, default=None):
+						return getattr(self, key, default)
+
+				order_row = MinimalOrderRow(order)
+			else:
+				# Item not found and not primary item, skip it
+				continue
 
 		qty = flt(row.get("qty") or 0)
 		if qty <= 0:
 			continue
 
-		max_qty = flt(row.get("max_qty") or order_row.qty)
+		max_qty = flt(row.get("max_qty") or getattr(order_row, "qty", 1))
 		if qty > max_qty:
 			frappe.throw(_("Quantity for item {0} cannot exceed {1}.").format(item_code, max_qty))
 
@@ -671,8 +746,13 @@ def make_purchase_order(service_order: str, items=None, product_location: str | 
 						row.get("rate") if row.get("rate") is not None else getattr(order_row, "rate", 0)
 					),
 					"amount": flt(row.get("amount") if row.get("amount") is not None else 0),
-					"warehouse": row.get("warehouse") or order_row.get("warehouse"),
-					"cost_center": row.get("cost_center") or order_row.get("cost_center"),
+					"warehouse": row.get("warehouse")
+					or getattr(order_row, "warehouse", None)
+					or getattr(order, "warehouse", None),
+					"cost_center": row.get("cost_center")
+					or getattr(order_row, "cost_center", None)
+					or getattr(order, "cost_center", None),
+					"serial_no": row.get("serial_no") or getattr(order_row, "serial_no", None),
 				},
 			)
 		)
@@ -688,6 +768,25 @@ def make_purchase_order(service_order: str, items=None, product_location: str | 
 		if not amount:
 			amount = rate * data["qty"]
 
+		# Get uom and stock_uom from order_row or fetch from Item master
+		uom = getattr(order_row, "uom", None)
+		stock_uom = getattr(order_row, "stock_uom", None)
+
+		if not stock_uom or not uom:
+			# Fetch from Item master if not available
+			try:
+				item_doc = frappe.get_cached_doc("Item", data["item_code"])
+				if not stock_uom:
+					stock_uom = item_doc.stock_uom
+				if not uom:
+					uom = item_doc.stock_uom  # Default to stock_uom if uom not set
+			except Exception:
+				# Fallback values
+				if not stock_uom:
+					stock_uom = uom or "Nos"
+				if not uom:
+					uom = stock_uom or "Nos"
+
 		_po_item = purchase_order.append(
 			"items",
 			{
@@ -696,8 +795,8 @@ def make_purchase_order(service_order: str, items=None, product_location: str | 
 				"description": getattr(order_row, "description", None),
 				"qty": data["qty"],
 				"schedule_date": today(),
-				"uom": getattr(order_row, "uom", None),
-				"stock_uom": getattr(order_row, "stock_uom", None) or getattr(order_row, "uom", None),
+				"uom": uom or stock_uom,
+				"stock_uom": stock_uom or uom,
 				"conversion_factor": 1,
 				"rate": rate,
 				"amount": amount,
@@ -718,12 +817,12 @@ def make_purchase_invoice(service_order: str, items=None, product_location: str 
 
 	service_request = frappe.get_doc("Service Request", order.service_request)
 
-	if not service_request.repair_vendor:
-		frappe.throw(
-			_("Please set a Repair Vendor on Service Request {0} before creating a Purchase Invoice.").format(
-				service_request.name
-			)
-		)
+	# if not service_request.repair_vendor:
+	# 	frappe.throw(
+	# 		_("Please set a Repair Vendor on Service Request {0} before creating a Purchase Invoice.").format(
+	# 			service_request.name
+	# 		)
+	# 	)
 
 	purchase_invoice = frappe.new_doc("Purchase Invoice")
 	purchase_invoice.company = order.company
@@ -769,14 +868,38 @@ def make_purchase_invoice(service_order: str, items=None, product_location: str 
 		if not item_code:
 			continue
 		order_row = order_item_map.get(item_code)
+
+		# If item not in order.items, it might be the primary item from header
+		# Create a minimal order_row object for it
 		if not order_row:
-			continue
+			# Check if this is the primary item from Service Order header
+			if order.item_code == item_code:
+				# Create a minimal order_row-like object
+				class MinimalOrderRow:
+					def __init__(self, order):
+						self.item_code = order.item_code
+						self.item_name = getattr(order, "item_name", None) or item_code
+						self.description = getattr(order, "description", None)
+						self.uom = getattr(order, "uom", None)
+						self.stock_uom = getattr(order, "stock_uom", None)
+						self.serial_no = getattr(order, "serial_no", None)
+						self.is_service = 0
+						self.qty = 1
+						self.rate = 0
+
+					def get(self, key, default=None):
+						return getattr(self, key, default)
+
+				order_row = MinimalOrderRow(order)
+			else:
+				# Item not found and not primary item, skip it
+				continue
 
 		qty = flt(row.get("qty") or 0)
 		if qty <= 0:
 			continue
 
-		max_qty = flt(row.get("max_qty") or order_row.qty)
+		max_qty = flt(row.get("max_qty") or getattr(order_row, "qty", 1))
 		if qty > max_qty:
 			frappe.throw(_("Quantity for item {0} cannot exceed {1}.").format(item_code, max_qty))
 
@@ -790,11 +913,16 @@ def make_purchase_invoice(service_order: str, items=None, product_location: str 
 						row.get("rate") if row.get("rate") is not None else getattr(order_row, "rate", 0)
 					),
 					"amount": flt(row.get("amount") if row.get("amount") is not None else 0),
-					"warehouse": row.get("warehouse") or order_row.get("warehouse"),
-					"cost_center": row.get("cost_center") or order_row.get("cost_center"),
+					"warehouse": row.get("warehouse")
+					or getattr(order_row, "warehouse", None)
+					or getattr(order, "warehouse", None),
+					"cost_center": row.get("cost_center")
+					or getattr(order_row, "cost_center", None)
+					or getattr(order, "cost_center", None),
 					"expense_account": row.get("expense_account")
-					or order_row.get("expense_account")
+					or getattr(order_row, "expense_account", None)
 					or default_expense_account,
+					"serial_no": row.get("serial_no") or getattr(order_row, "serial_no", None),
 				},
 			)
 		)
@@ -818,6 +946,18 @@ def make_purchase_invoice(service_order: str, items=None, product_location: str 
 		if not expense_account:
 			frappe.throw(_("Please set an Expense Account for item {0}.").format(data["item_code"]))
 
+		# Get uom from order_row or fetch from Item master
+		uom = getattr(order_row, "uom", None)
+
+		if not uom:
+			# Fetch from Item master if not available
+			try:
+				item_doc = frappe.get_cached_doc("Item", data["item_code"])
+				uom = item_doc.stock_uom
+			except Exception:
+				# Fallback value
+				uom = "Nos"
+
 		_pi_item = purchase_invoice.append(
 			"items",
 			{
@@ -825,7 +965,7 @@ def make_purchase_invoice(service_order: str, items=None, product_location: str 
 				"item_name": getattr(order_row, "item_name", None),
 				"description": getattr(order_row, "description", None),
 				"qty": data["qty"],
-				"uom": getattr(order_row, "uom", None),
+				"uom": uom,
 				"conversion_factor": 1,
 				"rate": rate,
 				"amount": amount,
