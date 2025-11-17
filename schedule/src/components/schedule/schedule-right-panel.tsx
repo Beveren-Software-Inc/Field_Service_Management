@@ -44,6 +44,7 @@ export function ScheduleRightPanel({
 }: ScheduleRightPanelProps) {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [technicianSearch, setTechnicianSearch] = useState("");
+  const [gridSearch, setGridSearch] = useState("");
   const [calendarMonth, setCalendarMonth] = useState(selectedDate);
   const [mapSearchQuery, setMapSearchQuery] = useState("");
   const [mapDurationFilter, setMapDurationFilter] = useState<"date" | "today" | "thisWeek" | "thisMonth" | "thisYear">("thisWeek");
@@ -289,8 +290,21 @@ export function ScheduleRightPanel({
                 />
               </div>
             )}
-            {/* Technician Search - Hidden in calendar and maps view */}
-            {viewType !== "calendar" && viewType !== "maps" && (
+            {/* Grid appointment search (includes technicians) */}
+            {viewType === "grid" ? (
+              <div className="relative w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search appointments, customers, or technicians..."
+                  value={gridSearch}
+                  onChange={(e) => setGridSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            ) : (
+              /* Technician search for gantt view */
+              viewType !== "calendar" &&
+              viewType !== "maps" && (
               <div className="relative w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -300,6 +314,7 @@ export function ScheduleRightPanel({
                   className="pl-9"
                 />
               </div>
+              )
             )}
           </div>
         </div>
@@ -331,6 +346,7 @@ export function ScheduleRightPanel({
             appointments={appointments}
             selectedDate={selectedDate}
             onAppointmentClick={onAppointmentSelect}
+            searchQuery={gridSearch}
           />
         )}
         {viewType === "calendar" && (

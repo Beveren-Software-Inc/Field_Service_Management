@@ -152,15 +152,21 @@ export function SettingsView({ onBack }: SettingsViewProps) {
   const currentLanguage = languages.find(l => l.code === language) || languages[0];
 
   return (
-    <div className="flex flex-col gap-6 w-full h-full overflow-y-auto p-6">
-      {onBack && (
-        <Button variant="ghost" onClick={onBack} className="w-fit">
-          ← Back
-        </Button>
-      )}
-
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Settings</h2>
+    <div className="flex flex-col gap-6 w-full h-full overflow-y-auto">
+      <div className="w-full bg-gradient-to-b from-primary/80 via-primary/60 to-primary/20 text-primary-foreground shadow-md border-b border-primary/20">
+        <div className="max-w-6xl mx-auto px-6 py-4 min-h-[70px] flex items-center justify-between">
+          <div className="flex-1">
+            {onBack && (
+              <Button variant="secondary" onClick={onBack} className="whitespace-nowrap">
+                ← Back
+              </Button>
+            )}
+          </div>
+          <div className="flex-1 text-center">
+            <p className="text-sm uppercase tracking-[0.4em] opacity-80">Settings</p>
+          </div>
+          <div className="flex-1" />
+        </div>
       </div>
 
       <Card>

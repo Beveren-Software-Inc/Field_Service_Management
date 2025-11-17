@@ -7,13 +7,12 @@ import { Appointment } from "../../pages/schedule/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { Badge } from "../ui/badge";
 import { cn } from "../../lib/utils";
-import { Input } from "../ui/input";
-import { Search } from "lucide-react";
 
 interface GridViewProps {
   appointments: Appointment[];
   selectedDate: Date;
   onAppointmentClick?: (appointment: Appointment) => void;
+  searchQuery?: string;
 }
 
 type SortField = "name" | "service_order" | "customer" | "status" | "posting_date" | "scheduled_start_datetime" | null;
@@ -35,10 +34,10 @@ export function GridView({
   appointments,
   selectedDate,
   onAppointmentClick,
+  searchQuery = "",
 }: GridViewProps) {
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [searchQuery, setSearchQuery] = useState("");
 
   // Parse backend datetime as local to avoid timezone drift
   const parseLocalDateTime = (value: string): Date => {
@@ -58,12 +57,21 @@ export function GridView({
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((apt) => {
+        const technicianMatch = (apt.service_technicians || []).some((tech) => {
+          const fullName = tech.full_name || "";
+          const code = tech.service_technician || "";
+          return (
+            fullName.toLowerCase().includes(query) || code.toLowerCase().includes(query)
+          );
+        });
+
         return (
           apt.name?.toLowerCase().includes(query) ||
           apt.service_order?.toLowerCase().includes(query) ||
           apt.customer?.toLowerCase().includes(query) ||
           apt.service_type?.toLowerCase().includes(query) ||
-          apt.status?.toLowerCase().includes(query)
+          apt.status?.toLowerCase().includes(query) ||
+          technicianMatch
         );
       });
     }
@@ -151,19 +159,6 @@ export function GridView({
 
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Search Bar */}
-      <div className="p-4 border-b border-border">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search appointments by ID, order, customer, type, or status..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-      </div>
-
       {/* Table */}
       <div className="flex-1 overflow-auto">
         <Table>

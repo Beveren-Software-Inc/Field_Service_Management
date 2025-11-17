@@ -88,7 +88,7 @@ def create_service_appointment(
 			"scheduled_start_datetime": scheduled_start_datetime,
 			"scheduled_finish_datetime": scheduled_finish_datetime,
 		},
-		limit=10,
+		limit=100,
 	)
 
 	found = None
@@ -210,8 +210,8 @@ def get_sidebar_data(mode):
 				"scheduled_finish_datetime",
 			],
 			filters={"docstatus": 1},
-			order_by="posting_date desc",
-			limit=30,
+			order_by="scheduled_start_datetime desc",
+			limit=100,
 		)
 		for a in appointments:
 			items = frappe.get_all(

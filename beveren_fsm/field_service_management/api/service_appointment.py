@@ -59,7 +59,7 @@ def get_appointments(
 		"Service Appointment",
 		filters=filters,
 		fields=requested_fields,
-		order_by="scheduled_start_datetime asc",
+		order_by="scheduled_start_datetime desc",
 		limit_page_length=limit_page_length if limit_page_length > 0 else None,
 	)
 
