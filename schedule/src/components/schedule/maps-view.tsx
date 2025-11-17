@@ -14,7 +14,7 @@ interface MapsViewProps {
   statusFilter?: string;
   technicianSearch?: string;
   searchQuery?: string;
-  durationFilter?: "thisWeek" | "thisMonth" | "thisYear";
+  durationFilter?: "today" | "thisWeek" | "thisMonth" | "thisYear";
 }
 
 const STATUS_COLORS: Record<string, { bg: string; border: string; dot: string; hex: string; bgHex: string; borderHex: string }> = {
@@ -88,6 +88,11 @@ export function MapsView({
     // Otherwise use duration filter
     const today = new Date();
     switch (durationFilter) {
+      case "today":
+        return {
+          start: startOfDay(today),
+          end: endOfDay(today),
+        };
       case "thisWeek":
         return {
           start: startOfWeek(today, { weekStartsOn: 1 }), // Monday
