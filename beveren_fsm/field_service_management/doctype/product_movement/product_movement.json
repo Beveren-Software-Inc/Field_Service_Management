@@ -78,6 +78,8 @@
    "fetch_from": "movement_type.destination",
    "fieldname": "destination",
    "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Destination"
   }
  ],
@@ -85,7 +87,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-11-12 04:12:53.341700",
+ "modified": "2025-11-17 04:21:43.163670",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Product Movement",

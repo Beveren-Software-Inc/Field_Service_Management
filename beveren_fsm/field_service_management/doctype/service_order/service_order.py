@@ -8,8 +8,8 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt, today
 
 LOCATION_STATUS_MAP = {
-	"delivered to customer": "Completed",
-	"deliver to customer": "Completed",  # fallback for legacy value
+	"delivered to customer": "Review",
+	"deliver to customer": "Review",  # fallback for legacy value
 	"receive from vendor": "In Progress",
 	"receive from customer": "In Progress",
 	"received from customer": "In Progress",

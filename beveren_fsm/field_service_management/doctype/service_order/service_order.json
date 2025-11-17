@@ -774,7 +774,8 @@
   {
    "fieldname": "service_total",
    "fieldtype": "Currency",
-   "label": "Service Total"
+   "label": "Service Total",
+   "read_only": 1
   },
   {
    "default": "0",
@@ -796,7 +797,8 @@
   {
    "fieldname": "spareparts_total",
    "fieldtype": "Currency",
-   "label": "SpareParts Total"
+   "label": "SpareParts Total",
+   "read_only": 1
   },
   {
    "allow_on_submit": 1,
@@ -819,7 +821,7 @@
    "link_fieldname": "custom_reference_service_document"
   }
  ],
- "modified": "2025-11-12 03:31:42.698792",
+ "modified": "2025-11-17 04:08:15.600873",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Service Order",

@@ -310,6 +310,7 @@
    "label": "Warranty Expiry Date"
   },
   {
+   "depends_on": "amc_contract",
    "fetch_from": "serial_no.amc_expiry_date",
    "fetch_if_empty": 1,
    "fieldname": "amc_expiry_date",
@@ -335,6 +336,7 @@
    "fieldname": "repair_vendor",
    "fieldtype": "Link",
    "label": "Repair Vendor",
+   "no_copy": 1,
    "options": "Supplier"
   },
   {
@@ -343,6 +345,7 @@
    "fieldname": "current_product_location",
    "fieldtype": "Link",
    "label": "Current Product Location",
+   "no_copy": 1,
    "options": "Product Location"
   },
   {
@@ -355,6 +358,7 @@
    "fieldname": "product_movement",
    "fieldtype": "Table",
    "label": "Product Movement",
+   "no_copy": 1,
    "options": "Product Movement",
    "read_only": 1
   }
@@ -371,7 +375,7 @@
    "link_fieldname": "service_request"
   }
  ],
- "modified": "2025-11-17 03:13:18.909917",
+ "modified": "2025-11-17 04:17:34.797562",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Service Request",
