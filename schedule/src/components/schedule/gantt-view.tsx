@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "../ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Appointment } from "../../pages/schedule/types";
-import { fetchTechnicians, reallocateAppointment, createAppointment, fetchServiceOrders, fetchServiceTypes, fetchItems } from "../../hooks/use-appointments";
+import { fetchTechnicians, reallocateAppointment, createAppointment, fetchServiceOrders, fetchServiceTypes, fetchItems, fetchAvailableServiceOrders } from "../../hooks/use-appointments";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { toast } from "../ui/use-toast";
 import { format, startOfDay, parse } from "date-fns";
@@ -53,7 +53,7 @@ export function GanttView({
 
   useEffect(() => {
     // Load master data for create modal
-    Promise.all([fetchServiceOrders(), fetchServiceTypes(), fetchItems()])
+    Promise.all([fetchAvailableServiceOrders(), fetchServiceTypes(), fetchItems()])
       .then(([so, st, it]) => {
         setOptionsServiceOrders(so);
         setOptionsServiceTypes(st);

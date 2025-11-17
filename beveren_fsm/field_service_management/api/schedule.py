@@ -4,6 +4,28 @@ import frappe
 
 
 @frappe.whitelist()
+def get_unassigned_service_orders(limit=50):
+	filters = {"docstatus": 1}
+	assigned_orders = frappe.get_all(
+		"Service Appointment",
+		filters={"service_order": ["is", "set"], "docstatus": ["!=", 2]},
+		pluck="service_order",
+		limit_page_length=0,
+	)
+	if assigned_orders:
+		filters["name"] = ["not in", assigned_orders]
+
+	orders = frappe.get_all(
+		"Service Order",
+		fields=["name", "customer", "priority", "posting_date", "status", "type"],
+		filters=filters,
+		order_by="posting_date desc",
+		limit_page_length=limit,
+	)
+	return orders
+
+
+@frappe.whitelist()
 def create_appointment_from_api(
 	posting_date,
 	service_order,

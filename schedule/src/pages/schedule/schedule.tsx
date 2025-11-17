@@ -6,9 +6,10 @@ import { TechniciansView } from "../../components/schedule/technicians-view";
 import { SettingsView } from "../../components/schedule/settings-view";
 import { SidebarMenu } from "../../components/layout/sidebar-menu";
 import { useScheduleStore } from "../../store";
-import { fetchAppointmentsWithFilter } from "../../hooks/use-appointments";
+import { fetchAppointmentsWithFilter, fetchServiceOrders } from "../../hooks/use-appointments";
 import { Toaster } from "../../components/ui/sonner";
 import { useEffect, useState } from "react";
+import { ServiceRequestsView } from "../../components/service-request/service-requests-view";
 
 export default function SchedulePage() {
   const [direction, setDirection] = useState<'ltr' | 'rtl'>('ltr');
@@ -39,20 +40,30 @@ export default function SchedulePage() {
     selectedDate,
     appointmentDateRange,
     statusFilter,
+    serviceOrderStatusFilter,
     viewType,
     selectedAppointment,
     leftPanelView,
+    leftListMode,
     settingsView,
+    requestsView,
+    serviceOrders,
+    serviceOrdersLoading,
     setAppointments,
     setLoading,
     setSelectedAppointments,
     setSelectedDate,
     setAppointmentDateRange,
     setStatusFilter,
+    setServiceOrderStatusFilter,
     setViewType,
     setSelectedAppointment,
     setLeftPanelView,
+    setLeftListMode,
     setSettingsView,
+    setRequestsView,
+    setServiceOrders,
+    setServiceOrdersLoading,
     toggleAppointmentSelection,
     selectAllAppointments,
     clearSelectedAppointments,
@@ -61,6 +72,10 @@ export default function SchedulePage() {
   useEffect(() => {
     loadAppointments();
   }, [appointmentDateRange.startDate, appointmentDateRange.endDate, statusFilter]);
+
+  useEffect(() => {
+    loadServiceOrders();
+  }, []);
 
   const loadAppointments = async () => {
     try {
@@ -75,6 +90,18 @@ export default function SchedulePage() {
       console.error("Error loading appointments:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadServiceOrders = async () => {
+    try {
+      setServiceOrdersLoading(true);
+      const data = await fetchServiceOrders();
+      setServiceOrders(data);
+    } catch (error) {
+      console.error("Error loading service orders:", error);
+    } finally {
+      setServiceOrdersLoading(false);
     }
   };
 
@@ -101,70 +128,107 @@ export default function SchedulePage() {
     loadAppointments();
   };
 
+  const activeMenu = settingsView
+    ? "settings"
+    : requestsView
+    ? "requests"
+    : leftPanelView === "technicians"
+    ? "technicians"
+    : "home";
+
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden" dir={direction}>
-      {/* Left Sidebar Menu */}
-      <SidebarMenu
-        onTechniciansClick={() => {
-          setLeftPanelView("technicians");
-          setSettingsView(false);
-        }}
-        onScheduleClick={() => {
-          setLeftPanelView("appointments");
-          setSettingsView(false);
-        }}
-        onSettingsClick={() => {
-          setSettingsView(true);
-        }}
-      />
+    <div className="flex flex-col h-screen w-full bg-background overflow-hidden">
+      <div className="relative flex-1 overflow-hidden" dir={direction}>
+        <div className="absolute inset-y-0 right-0 w-1 bg-primary/60 pointer-events-none" />
+        <div className="flex h-full w-full bg-background overflow-hidden">
+          {/* Left Sidebar Menu */}
+          <SidebarMenu
+            activeMenu={activeMenu}
+            onTechniciansClick={() => {
+              setRequestsView(false);
+              setLeftPanelView("technicians");
+              setSettingsView(false);
+            }}
+            onScheduleClick={() => {
+              setRequestsView(false);
+              setLeftPanelView("appointments");
+              setSettingsView(false);
+            }}
+            onRequestsClick={() => {
+              setRequestsView(true);
+              setSettingsView(false);
+            }}
+            onSettingsClick={() => {
+              setRequestsView(false);
+              setSettingsView(true);
+            }}
+          />
 
-      {settingsView ? (
-        /* Settings View - Full Width */
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <SettingsView onBack={() => setSettingsView(false)} />
+          {settingsView ? (
+            /* Settings View - Full Width */
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <SettingsView onBack={() => setSettingsView(false)} />
+            </div>
+          ) : requestsView ? (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <ServiceRequestsView />
+            </div>
+          ) : (
+            <>
+              {/* Left Panel - 20% */}
+              <div className="w-[20%] border-r border-border flex flex-col">
+                {leftPanelView === "appointments" ? (
+                  <ScheduleLeftPanel
+                    appointments={appointments}
+                    loading={loading}
+                    selectedAppointments={selectedAppointments}
+                    statusFilter={statusFilter}
+                    serviceOrderStatusFilter={serviceOrderStatusFilter}
+                    appointmentDateRange={appointmentDateRange}
+                    onStatusFilterChange={setStatusFilter}
+                    onServiceOrderFilterChange={setServiceOrderStatusFilter}
+                    onDateRangeChange={setAppointmentDateRange}
+                    onAppointmentSelect={handleAppointmentSelect}
+                    onSelectAll={handleSelectAll}
+                    onAppointmentClick={setSelectedAppointment}
+                    onMassActionComplete={handleMassActionComplete}
+                    mode={leftListMode}
+                    onModeToggle={() =>
+                      setLeftListMode(leftListMode === "orders" ? "appointments" : "orders")
+                    }
+                    serviceOrders={serviceOrders}
+                    serviceOrdersLoading={serviceOrdersLoading}
+                  />
+                ) : (
+                  <TechniciansView
+                    appointments={appointments}
+                    onAppointmentClick={setSelectedAppointment}
+                  />
+                )}
+              </div>
+
+              {/* Right Panel - 75% */}
+              <div className="flex-1 flex flex-col">
+                <ScheduleRightPanel
+                  appointments={appointments}
+                  selectedDate={selectedDate}
+                  onDateChange={setSelectedDate}
+                  viewType={viewType}
+                  onViewTypeChange={setViewType}
+                  selectedAppointment={selectedAppointment}
+                  onAppointmentSelect={setSelectedAppointment}
+                  onRefresh={loadAppointments}
+                  statusFilter={statusFilter}
+                />
+              </div>
+            </>
+          )}
         </div>
-      ) : (
-        <>
-          {/* Left Panel - 20% */}
-          <div className="w-[20%] border-r border-border flex flex-col">
-            {leftPanelView === "appointments" ? (
-              <ScheduleLeftPanel
-                appointments={appointments}
-                loading={loading}
-                selectedAppointments={selectedAppointments}
-                statusFilter={statusFilter}
-                appointmentDateRange={appointmentDateRange}
-                onStatusFilterChange={setStatusFilter}
-                onDateRangeChange={setAppointmentDateRange}
-                onAppointmentSelect={handleAppointmentSelect}
-                onSelectAll={handleSelectAll}
-                onAppointmentClick={setSelectedAppointment}
-                onMassActionComplete={handleMassActionComplete}
-              />
-            ) : (
-              <TechniciansView
-                appointments={appointments}
-                onAppointmentClick={setSelectedAppointment}
-              />
-            )}
-          </div>
+      </div>
 
-          {/* Right Panel - 75% */}
-          <div className="flex-1 flex flex-col">
-            <ScheduleRightPanel
-              appointments={appointments}
-              selectedDate={selectedDate}
-              onDateChange={setSelectedDate}
-              viewType={viewType}
-              onViewTypeChange={setViewType}
-              selectedAppointment={selectedAppointment}
-              onAppointmentSelect={setSelectedAppointment}
-              onRefresh={loadAppointments}
-              statusFilter={statusFilter}
-            />
-          </div>
-        </>
-      )}
+      <div className="border-t border-primary text-right text-[0.65rem] tracking-[0.2em] uppercase text-primary px-4 py-3 bg-gradient-to-t from-primary/75 via-primary/10 to-transparent">
+        Powered By Beveren Software
+      </div>
 
       <Toaster />
     </div>

@@ -1,29 +1,38 @@
 "use client";
 
-import { Home, Users, Settings } from "lucide-react";
+import { Home, Users, Settings, ClipboardList } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useState } from "react";
 
 interface MenuItem {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
-  active?: boolean;
+  key: "home" | "requests" | "technicians" | "settings";
   onClick?: () => void;
 }
 
 interface SidebarMenuProps {
+  activeMenu: "home" | "requests" | "technicians" | "settings";
   onTechniciansClick?: () => void;
   onScheduleClick?: () => void;
+  onRequestsClick?: () => void;
   onSettingsClick?: () => void;
 }
 
-export function SidebarMenu({ onTechniciansClick, onScheduleClick, onSettingsClick }: SidebarMenuProps) {
+export function SidebarMenu({
+  activeMenu,
+  onTechniciansClick,
+  onScheduleClick,
+  onRequestsClick,
+  onSettingsClick,
+}: SidebarMenuProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   const menuItems: MenuItem[] = [
-    { icon: Home, label: "Home", active: true, onClick: onScheduleClick },
-    { icon: Users, label: "Technicians", onClick: onTechniciansClick },
-    { icon: Settings, label: "Settings", onClick: onSettingsClick },
+    { icon: Home, label: "Home", key: "home", onClick: onScheduleClick },
+    { icon: ClipboardList, label: "Requests", key: "requests", onClick: onRequestsClick },
+    { icon: Users, label: "Technicians", key: "technicians", onClick: onTechniciansClick },
+    { icon: Settings, label: "Settings", key: "settings", onClick: onSettingsClick },
   ];
 
   return (
@@ -42,7 +51,7 @@ export function SidebarMenu({ onTechniciansClick, onScheduleClick, onSettingsCli
             <button
               className={cn(
                 "w-12 h-12 rounded-lg flex items-center justify-center transition-colors",
-                item.active
+                activeMenu === item.key
                   ? "bg-primary text-white shadow-md"
                   : "hover:bg-primary/20 text-muted-foreground hover:text-foreground hover:bg-primary/30"
               )}

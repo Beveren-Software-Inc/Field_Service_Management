@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Appointment } from "../pages/schedule/types";
+import { Appointment, ServiceOrderSummary } from "../pages/schedule/types";
 
 // Helper function to get initial viewType from localStorage
 const getInitialViewType = (): "gantt" | "grid" | "maps" | "calendar" => {
@@ -17,18 +17,25 @@ interface ScheduleState {
   selectedAppointments: string[];
   selectedAppointment: Appointment | null;
   loading: boolean;
+  serviceOrders: ServiceOrderSummary[];
+  serviceOrdersLoading: boolean;
 
   // Filters
   selectedDate: Date; // For right panel (Gantt view)
   appointmentDateRange: { startDate: Date | null; endDate: Date | null }; // For left panel appointments list
   statusFilter: string;
+  serviceOrderStatusFilter: string;
   viewType: "gantt" | "grid" | "maps" | "calendar";
-  leftPanelView: "appointments" | "technicians"; // New: track left panel view mode
+  leftPanelView: "appointments" | "technicians"; // Track left panel view mode
+  leftListMode: "orders" | "appointments"; // Track list content within schedule view
   settingsView: boolean; // Track if settings view is open
+  requestsView: boolean; // Track if service requests view is active
 
   // Actions
   setAppointments: (appointments: Appointment[]) => void;
   setLoading: (loading: boolean) => void;
+  setServiceOrders: (orders: ServiceOrderSummary[]) => void;
+  setServiceOrdersLoading: (loading: boolean) => void;
   setSelectedAppointments: (selectedAppointments: string[]) => void;
   toggleAppointmentSelection: (appointmentId: string) => void;
   selectAllAppointments: (appointmentIds: string[]) => void;
@@ -37,9 +44,12 @@ interface ScheduleState {
   setSelectedDate: (date: Date) => void;
   setAppointmentDateRange: (range: { startDate: Date | null; endDate: Date | null }) => void;
   setStatusFilter: (filter: string) => void;
+  setServiceOrderStatusFilter: (filter: string) => void;
   setViewType: (view: "gantt" | "grid" | "maps" | "calendar") => void;
   setLeftPanelView: (view: "appointments" | "technicians") => void;
+  setLeftListMode: (mode: "orders" | "appointments") => void;
   setSettingsView: (open: boolean) => void;
+  setRequestsView: (open: boolean) => void;
 
   // Helper getters
   isAppointmentSelected: (appointmentId: string) => boolean;
@@ -51,19 +61,26 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
   selectedAppointments: [],
   selectedAppointment: null,
   loading: false,
+  serviceOrders: [],
+  serviceOrdersLoading: false,
   selectedDate: new Date(),
   appointmentDateRange: {
     startDate: new Date(new Date().getFullYear(), 0, 1), // Start of year
     endDate: new Date(), // Today
   },
   statusFilter: "all",
+  serviceOrderStatusFilter: "all",
   viewType: getInitialViewType(),
-  leftPanelView: "appointments", // Default to appointments view
+  leftPanelView: "appointments",
+  leftListMode: "orders",
   settingsView: false, // Settings view closed by default
+  requestsView: false,
 
   // Actions
   setAppointments: (appointments) => set({ appointments }),
   setLoading: (loading) => set({ loading }),
+  setServiceOrders: (orders) => set({ serviceOrders: orders }),
+  setServiceOrdersLoading: (loading) => set({ serviceOrdersLoading: loading }),
   setSelectedAppointments: (selectedAppointments) => set({ selectedAppointments }),
   toggleAppointmentSelection: (appointmentId) =>
     set((state) => {
@@ -85,6 +102,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
   setSelectedDate: (date) => set({ selectedDate: date }),
   setAppointmentDateRange: (range) => set({ appointmentDateRange: range }),
   setStatusFilter: (filter) => set({ statusFilter: filter }),
+  setServiceOrderStatusFilter: (filter) => set({ serviceOrderStatusFilter: filter }),
   setViewType: (view) => {
     set({ viewType: view });
     // Save to localStorage
@@ -93,7 +111,9 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
     }
   },
   setLeftPanelView: (view) => set({ leftPanelView: view }),
+  setLeftListMode: (mode) => set({ leftListMode: mode }),
   setSettingsView: (open) => set({ settingsView: open }),
+  setRequestsView: (open) => set({ requestsView: open }),
 
   // Helper getters
   isAppointmentSelected: (appointmentId) => {

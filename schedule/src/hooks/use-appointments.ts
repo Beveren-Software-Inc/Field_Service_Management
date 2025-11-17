@@ -1,4 +1,4 @@
-import { Appointment } from "../pages/schedule/types";
+import { Appointment, ServiceOrderDetail } from "../pages/schedule/types";
 
 export async function fetchAppointmentsWithFilter(
   startDate: Date | null,
@@ -178,13 +178,75 @@ export interface CreateAppointmentTechnician {
 export async function fetchServiceOrders(): Promise<any[]> {
   //eslint-disable-next-line @typescript-eslint/no-explicit-any
   const csrfToken = (window as any).csrf_token;
-  const url = '/api/resource/Service Order?fields=["name","customer","type"]&limit_page_length=50';
+
+  const params = new URLSearchParams({
+    fields: JSON.stringify(["name", "customer", "status", "priority", "posting_date", "type"]),
+    filters: JSON.stringify([["docstatus", "=", 1]]),
+    order_by: "posting_date desc",
+    limit_page_length: "50",
+  });
+
+  const url = `/api/resource/Service Order?${params.toString()}`;
+
   const resp = await fetch(url, {
-    headers: { Accept: "application/json", "Content-Type": "application/json", "X-Frappe-CSRF-Token": csrfToken },
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-Frappe-CSRF-Token": csrfToken,
+    },
     credentials: "include",
   });
+
+  if (!resp.ok) {
+    throw new Error(`Failed to fetch service orders: ${resp.statusText}`);
+  }
+
   const json = await resp.json();
   return json.data || [];
+}
+
+export async function fetchServiceOrderDetail(name: string): Promise<ServiceOrderDetail> {
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const csrfToken = (window as any).csrf_token;
+
+  const url = `/api/resource/Service Order/${encodeURIComponent(name)}`;
+
+  const resp = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-Frappe-CSRF-Token": csrfToken,
+    },
+    credentials: "include",
+  });
+
+  if (!resp.ok) {
+    throw new Error(`Failed to fetch service order: ${resp.statusText}`);
+  }
+
+  const json = await resp.json();
+  return json.data || json.data?.data || json;
+}
+
+export async function fetchAvailableServiceOrders(): Promise<any[]> {
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const csrfToken = (window as any).csrf_token;
+  const resp = await fetch(
+    "/api/method/beveren_fsm.field_service_management.api.schedule.get_unassigned_service_orders",
+    {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "X-Frappe-CSRF-Token": csrfToken,
+      },
+      credentials: "include",
+    }
+  );
+  if (!resp.ok) {
+    throw new Error(`Failed to fetch available service orders: ${resp.statusText}`);
+  }
+  const json = await resp.json();
+  return json.message || [];
 }
 
 //eslint-disable-next-line @typescript-eslint/no-explicit-any

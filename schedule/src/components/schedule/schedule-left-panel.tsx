@@ -5,9 +5,15 @@ import { Checkbox } from "../ui/checkbox";
 import { Badge } from "../ui/badge";
 import { ScrollArea } from "../ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { Appointment, AppointmentStatus } from "../../pages/schedule/types";
+import {
+  Appointment,
+  AppointmentStatus,
+  ServiceOrderDetail,
+  ServiceOrderSummary,
+} from "../../pages/schedule/types";
 import { Skeleton } from "../ui/skeleton";
 import { AppointmentDetailSheet } from "./appointment-detail-sheet";
+import { ServiceOrderDetailSheet } from "./service-order-detail-sheet";
 import { MassActionsDropdown } from "./mass-actions-dropdown";
 import { Filter, CalendarIcon } from "lucide-react";
 import { Button } from "../ui/button";
@@ -15,6 +21,7 @@ import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { format } from "date-fns";
 import { cn } from "../../lib/utils";
+import { fetchServiceOrderDetail } from "../../hooks/use-appointments";
 
 const STATUS_OPTIONS: AppointmentStatus[] = [
   "Open",
@@ -42,13 +49,19 @@ interface ScheduleLeftPanelProps {
   loading: boolean;
   selectedAppointments: string[];
   statusFilter: string;
+  serviceOrderStatusFilter: string;
   appointmentDateRange: { startDate: Date | null; endDate: Date | null };
   onStatusFilterChange: (status: string) => void;
+  onServiceOrderFilterChange: (status: string) => void;
   onDateRangeChange: (range: { startDate: Date | null; endDate: Date | null }) => void;
   onAppointmentSelect: (appointmentId: string, checked: boolean) => void;
   onSelectAll: (checked: boolean) => void;
   onAppointmentClick: (appointment: Appointment) => void;
   onMassActionComplete: () => void;
+  mode: "orders" | "appointments";
+  onModeToggle: () => void;
+  serviceOrders: ServiceOrderSummary[];
+  serviceOrdersLoading: boolean;
 }
 
 export function ScheduleLeftPanel({
@@ -56,15 +69,24 @@ export function ScheduleLeftPanel({
   loading,
   selectedAppointments,
   statusFilter,
+  serviceOrderStatusFilter,
   appointmentDateRange,
   onStatusFilterChange,
+  onServiceOrderFilterChange,
   onDateRangeChange,
   onAppointmentSelect,
   onSelectAll,
   onAppointmentClick,
   onMassActionComplete,
+  mode,
+  onModeToggle,
+  serviceOrders,
+  serviceOrdersLoading,
 }: ScheduleLeftPanelProps) {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [selectedServiceOrder, setSelectedServiceOrder] = useState<ServiceOrderDetail | null>(null);
+  const [serviceOrderSheetOpen, setServiceOrderSheetOpen] = useState(false);
+  const [serviceOrderDetailLoading, setServiceOrderDetailLoading] = useState(false);
   const [filtersPopoverOpen, setFiltersPopoverOpen] = useState(false);
   const [startDatePickerOpen, setStartDatePickerOpen] = useState(false);
   const [endDatePickerOpen, setEndDatePickerOpen] = useState(false);
@@ -116,128 +138,193 @@ export function ScheduleLeftPanel({
     onAppointmentClick(appointment);
   };
 
+  const formatOrderDate = (dateString?: string) => {
+    if (!dateString) return null;
+    try {
+      return format(new Date(dateString), "MMM d, yyyy");
+    } catch {
+      return dateString;
+    }
+  };
+
+  const getOrderStatusColor = (status?: string) => {
+    if (!status) return "border-border text-muted-foreground";
+    const normalized = status.toLowerCase();
+    if (normalized.includes("open") || normalized.includes("pending")) {
+      return "bg-blue-50 text-blue-700 border-blue-200";
+    }
+    if (normalized.includes("progress") || normalized.includes("dispatch")) {
+      return "bg-orange-50 text-orange-700 border-orange-200";
+    }
+    if (normalized.includes("complete") || normalized.includes("closed")) {
+      return "bg-green-50 text-green-700 border-green-200";
+    }
+    if (normalized.includes("cancel")) {
+      return "bg-gray-50 text-gray-600 border-gray-200";
+    }
+    return "border-border text-muted-foreground";
+  };
+
+  const getOrderPriorityColor = (priority?: string) => {
+    if (!priority) return "border-border text-muted-foreground";
+    const normalized = priority.toLowerCase();
+    if (normalized === "high") {
+      return "bg-red-50 text-red-700 border-red-200";
+    }
+    if (normalized === "medium") {
+      return "bg-amber-50 text-amber-700 border-amber-200";
+    }
+    if (normalized === "low") {
+      return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    }
+    return "border-border text-muted-foreground";
+  };
+
+  const orderStatusOptions = Array.from(
+    new Set(
+      serviceOrders
+        .map((order) => (order.status || "").trim())
+        .filter((status) => !!status)
+    )
+  ).sort();
+
+  const filteredServiceOrders = serviceOrders.filter((order) => {
+    if (serviceOrderStatusFilter === "all") return true;
+    const status = (order.status || "").toLowerCase();
+    return status === serviceOrderStatusFilter.toLowerCase();
+  });
+
+  const handleServiceOrderClick = async (orderName: string) => {
+    try {
+      setServiceOrderDetailLoading(true);
+      setServiceOrderSheetOpen(true);
+      const detail = await fetchServiceOrderDetail(orderName);
+      setSelectedServiceOrder(detail);
+    } catch (error) {
+      console.error("Failed to load service order detail", error);
+    } finally {
+      setServiceOrderDetailLoading(false);
+    }
+  };
+
+  const renderServiceOrders = () => {
+    if (serviceOrdersLoading) {
+      return (
+        <div className="space-y-2 p-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="space-y-2 p-3 border rounded-md">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-1/2" />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (!serviceOrdersLoading && filteredServiceOrders.length === 0) {
+      return (
+        <div className="p-8 text-center text-muted-foreground">
+          <p>No service orders found</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="p-2 space-y-2">
+        {filteredServiceOrders.map((order) => (
+          <div
+            key={order.name}
+            className="p-3 border rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
+            onClick={() => handleServiceOrderClick(order.name)}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{order.name}</p>
+                {order.customer && (
+                  <p className="text-xs text-muted-foreground truncate">{order.customer}</p>
+                )}
+              </div>
+              {order.status && (
+                <Badge
+                  variant="outline"
+                  className={`text-xs border ${getOrderStatusColor(order.status)}`}
+                >
+                  {order.status}
+                </Badge>
+              )}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              {order.priority && (
+                <span
+                  className={`px-2 py-0.5 rounded-full border ${getOrderPriorityColor(
+                    order.priority
+                  )}`}
+                >
+                  Priority: {order.priority}
+                </span>
+              )}
+              {order.type && (
+                <span className="px-2 py-0.5 rounded-full border border-border">
+                  {order.type}
+                </span>
+              )}
+              {formatOrderDate(order.posting_date) && (
+                <span>Created {formatOrderDate(order.posting_date)}</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const isOrderMode = mode === "orders";
+
   return (
     <>
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold">Service Appointments</h2>
-            <Badge variant="secondary">{appointments.length}</Badge>
+          <div className="flex items-center justify-between mb-3 gap-3">
+            <div>
+
+              <h2 className="text-lg font-semibold">
+                {isOrderMode ? "Service Orders" : "Service Appointments"}
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">
+                {isOrderMode ? serviceOrders.length : appointments.length}
+              </Badge>
+              <Button
+                variant={isOrderMode ? "outline" : "default"}
+                size="sm"
+                className={cn(
+                  "text-xs font-semibold transition-colors",
+                  isOrderMode
+                    ? "border-primary text-primary hover:bg-primary/10"
+                    : "bg-primary text-primary-foreground"
+                )}
+                onClick={onModeToggle}
+              >
+                {isOrderMode ? "View Appointments" : "View Service Orders"}
+              </Button>
+            </div>
           </div>
 
-          {/* Filter Section */}
-          <div className="flex items-center gap-2 mb-3">
-            {/* Filter Menu Button */}
-            <Popover open={filtersPopoverOpen} onOpenChange={setFiltersPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  title="More Filters"
-                >
-                  <Filter className="h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80" align="start">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm">Date Range Filter</h4>
-
-                    {/* Start Date */}
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">From Date</label>
-                      <Popover open={startDatePickerOpen} onOpenChange={setStartDatePickerOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !appointmentDateRange.startDate && "text-muted-foreground"
-                            )}
-                            size="sm"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {appointmentDateRange.startDate ? (
-                              format(appointmentDateRange.startDate, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={appointmentDateRange.startDate || undefined}
-                            onSelect={(date) => {
-                              if (date) {
-                                onDateRangeChange({
-                                  ...appointmentDateRange,
-                                  startDate: date,
-                                });
-                                setStartDatePickerOpen(false);
-                              }
-                            }}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    {/* End Date */}
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">To Date</label>
-                      <Popover open={endDatePickerOpen} onOpenChange={setEndDatePickerOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !appointmentDateRange.endDate && "text-muted-foreground"
-                            )}
-                            size="sm"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {appointmentDateRange.endDate ? (
-                              format(appointmentDateRange.endDate, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={appointmentDateRange.endDate || undefined}
-                            onSelect={(date) => {
-                              if (date) {
-                                onDateRangeChange({
-                                  ...appointmentDateRange,
-                                  endDate: date,
-                                });
-                                setEndDatePickerOpen(false);
-                              }
-                            }}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-
-            {/* Status Filter - Always Visible */}
-            <div className="flex-1">
-              <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+          {isOrderMode ? (
+            <div className="mb-3">
+              <Select
+                value={serviceOrderStatusFilter}
+                onValueChange={onServiceOrderFilterChange}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  {STATUS_OPTIONS.map((status) => (
+                  {orderStatusOptions.map((status) => (
                     <SelectItem key={status} value={status}>
                       {status}
                     </SelectItem>
@@ -245,155 +332,282 @@ export function ScheduleLeftPanel({
                 </SelectContent>
               </Select>
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Filter Section */}
+              <div className="flex items-center gap-2 mb-3">
+                {/* Filter Menu Button */}
+                <Popover open={filtersPopoverOpen} onOpenChange={setFiltersPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      title="More Filters"
+                    >
+                      <Filter className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" align="start">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm">Date Range Filter</h4>
 
-          {/* Mass Actions */}
-          {selectedAppointments.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-border">
-              <MassActionsDropdown
-                selectedAppointmentIds={selectedAppointments}
-                onComplete={onMassActionComplete}
-              />
-            </div>
+                        {/* Start Date */}
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">From Date</label>
+                          <Popover open={startDatePickerOpen} onOpenChange={setStartDatePickerOpen}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !appointmentDateRange.startDate && "text-muted-foreground"
+                                )}
+                                size="sm"
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {appointmentDateRange.startDate ? (
+                                  format(appointmentDateRange.startDate, "PPP")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={appointmentDateRange.startDate || undefined}
+                                onSelect={(date) => {
+                                  if (date) {
+                                    onDateRangeChange({
+                                      ...appointmentDateRange,
+                                      startDate: date,
+                                    });
+                                    setStartDatePickerOpen(false);
+                                  }
+                                }}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+
+                        {/* End Date */}
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">To Date</label>
+                          <Popover open={endDatePickerOpen} onOpenChange={setEndDatePickerOpen}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !appointmentDateRange.endDate && "text-muted-foreground"
+                                )}
+                                size="sm"
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {appointmentDateRange.endDate ? (
+                                  format(appointmentDateRange.endDate, "PPP")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={appointmentDateRange.endDate || undefined}
+                                onSelect={(date) => {
+                                  if (date) {
+                                    onDateRangeChange({
+                                      ...appointmentDateRange,
+                                      endDate: date,
+                                    });
+                                    setEndDatePickerOpen(false);
+                                  }
+                                }}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                {/* Status Filter - Always Visible */}
+                <div className="flex-1">
+                  <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      {STATUS_OPTIONS.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {status}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Mass Actions */}
+              {selectedAppointments.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-border">
+                  <MassActionsDropdown
+                    selectedAppointmentIds={selectedAppointments}
+                    onComplete={onMassActionComplete}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
 
         {/* Appointments List */}
         <ScrollArea className="flex-1">
-          <div className="p-2 space-y-1">
-            {/* Select All Checkbox */}
-            {appointments.length > 0 && (
-              <div className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded-md">
-                <div className="relative">
-                  <Checkbox
-                    ref={selectAllCheckboxRef}
-                    checked={allSelected}
-                    onCheckedChange={onSelectAll}
-                    className={someSelected ? "data-[indeterminate=true]:bg-primary/50" : ""}
-                  />
-                  {someSelected && !allSelected && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="w-2 h-0.5 bg-primary-foreground rounded"></div>
-                    </div>
-                  )}
-                </div>
-                <span className="text-sm text-muted-foreground">
-                  {selectedAppointments.length > 0
-                    ? `${selectedAppointments.length} selected`
-                    : "Select all"}
-                </span>
-              </div>
-            )}
-
-            {/* Loading State */}
-            {loading && (
-              <div className="space-y-2 p-2">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="space-y-2 p-3 border rounded-md">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-full" />
-                    <Skeleton className="h-3 w-1/2" />
+          {isOrderMode ? (
+            renderServiceOrders()
+          ) : (
+            <div className="p-2 space-y-1">
+              {/* Select All Checkbox */}
+              {appointments.length > 0 && (
+                <div className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded-md">
+                  <div className="relative">
+                    <Checkbox
+                      ref={selectAllCheckboxRef}
+                      checked={allSelected}
+                      onCheckedChange={onSelectAll}
+                      className={someSelected ? "data-[indeterminate=true]:bg-primary/50" : ""}
+                    />
+                    {someSelected && !allSelected && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="w-2 h-0.5 bg-primary-foreground rounded"></div>
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
+                  <span className="text-sm text-muted-foreground">
+                    {selectedAppointments.length > 0
+                      ? `${selectedAppointments.length} selected`
+                      : "Select all"}
+                  </span>
+                </div>
+              )}
 
-            {/* Appointments */}
-            {!loading && appointments.length === 0 && (
-              <div className="p-8 text-center text-muted-foreground">
-                <p>No appointments found</p>
-              </div>
-            )}
+              {/* Loading State */}
+              {loading && (
+                <div className="space-y-2 p-2">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="space-y-2 p-3 border rounded-md">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-full" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                  ))}
+                </div>
+              )}
 
-            {!loading &&
-              appointments.map((appointment) => {
-                const isSelected = selectedAppointments.includes(appointment.name);
-                const isCompleted = appointment.status === "Completed";
-                return (
-                  <div
-                    key={appointment.name}
-                    className={`
+              {/* Appointments */}
+              {!loading && appointments.length === 0 && (
+                <div className="p-8 text-center text-muted-foreground">
+                  <p>No appointments found</p>
+                </div>
+              )}
+
+              {!loading &&
+                appointments.map((appointment) => {
+                  const isSelected = selectedAppointments.includes(appointment.name);
+                  const isCompleted = appointment.status === "Completed";
+                  return (
+                    <div
+                      key={appointment.name}
+                      className={`
                       group relative p-3 border rounded-md cursor-pointer transition-colors
                       ${isSelected ? "bg-primary/5 border-primary" : "hover:bg-muted/50"}
                       ${isCompleted ? "opacity-80" : ""}
                     `}
-                    onClick={() => handleAppointmentClick(appointment)}
-                    draggable={!isCompleted}
-                    onDragStart={(e) => {
-                      if (isCompleted) {
-                        e.preventDefault();
-                        return;
-                      }
-                      // Package minimal data for drop target: id, duration, current start
-                      const start = appointment.scheduled_start_datetime
-                        ? new Date(appointment.scheduled_start_datetime).toISOString()
-                        : null;
-                      const end = appointment.scheduled_finish_datetime
-                        ? new Date(appointment.scheduled_finish_datetime).toISOString()
-                        : null;
-                      const durationMin = start && end ? Math.max(0, Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000)) : 60;
-                      e.dataTransfer.setData(
-                        "application/json",
-                        JSON.stringify({
-                          type: "appointment",
-                          id: appointment.name,
-                          durationMinutes: durationMin,
-                        })
-                      );
-                    }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        checked={isSelected}
-                        disabled={isCompleted}
-                        onCheckedChange={(checked) =>
-                          onAppointmentSelect(appointment.name, checked as boolean)
+                      onClick={() => handleAppointmentClick(appointment)}
+                      draggable={!isCompleted}
+                      onDragStart={(e) => {
+                        if (isCompleted) {
+                          e.preventDefault();
+                          return;
                         }
-                        onClick={(e) => e.stopPropagation()}
-                        className="mt-1"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium truncate">
-                            {appointment.service_order || appointment.name}
-                          </span>
-                          <Badge
-                            variant="outline"
-                            className={`text-xs ${getStatusColor(appointment.status)}`}
-                          >
-                            {appointment.status}
-                          </Badge>
+                        // Package minimal data for drop target: id, duration, current start
+                        const start = appointment.scheduled_start_datetime
+                          ? new Date(appointment.scheduled_start_datetime).toISOString()
+                          : null;
+                        const end = appointment.scheduled_finish_datetime
+                          ? new Date(appointment.scheduled_finish_datetime).toISOString()
+                          : null;
+                        const durationMin = start && end ? Math.max(0, Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000)) : 60;
+                        e.dataTransfer.setData(
+                          "application/json",
+                          JSON.stringify({
+                            type: "appointment",
+                            id: appointment.name,
+                            durationMinutes: durationMin,
+                          })
+                        );
+                      }}
+                    >
+                      <div className="flex items-start gap-3">
+                        <Checkbox
+                          checked={isSelected}
+                          disabled={isCompleted}
+                          onCheckedChange={(checked) =>
+                            onAppointmentSelect(appointment.name, checked as boolean)
+                          }
+                          onClick={(e) => e.stopPropagation()}
+                          className="mt-1"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium truncate">
+                              {appointment.service_order || appointment.name}
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className={`text-xs ${getStatusColor(appointment.status)}`}
+                            >
+                              {appointment.status}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                            {getShortDescription(appointment)}
+                          </p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            {appointment.customer && (
+                              <span className="truncate">{appointment.customer}</span>
+                            )}
+                            {appointment.scheduled_start_datetime && (
+                              <>
+                                <span>•</span>
+                                <span>{formatDate(appointment.scheduled_start_datetime)}</span>
+                              </>
+                            )}
+                          </div>
+                          {appointment.service_technicians &&
+                            appointment.service_technicians.length > 0 && (
+                              <div className="mt-2 text-xs text-muted-foreground">
+                                <span>
+                                  {appointment.service_technicians
+                                    .map((t) => t.full_name)
+                                    .join(", ")}
+                                </span>
+                              </div>
+                            )}
                         </div>
-                        <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-                          {getShortDescription(appointment)}
-                        </p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          {appointment.customer && (
-                            <span className="truncate">{appointment.customer}</span>
-                          )}
-                          {appointment.scheduled_start_datetime && (
-                            <>
-                              <span>•</span>
-                              <span>{formatDate(appointment.scheduled_start_datetime)}</span>
-                            </>
-                          )}
-                        </div>
-                        {appointment.service_technicians &&
-                          appointment.service_technicians.length > 0 && (
-                            <div className="mt-2 text-xs text-muted-foreground">
-                              <span>
-                                {appointment.service_technicians
-                                  .map((t) => t.full_name)
-                                  .join(", ")}
-                              </span>
-                            </div>
-                          )}
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-          </div>
+                  );
+                })}
+            </div>
+          )}
         </ScrollArea>
       </div>
 
@@ -405,6 +619,18 @@ export function ScheduleLeftPanel({
           onOpenChange={(open) => !open && setSelectedAppointment(null)}
         />
       )}
+
+      <ServiceOrderDetailSheet
+        order={selectedServiceOrder}
+        open={serviceOrderSheetOpen}
+        loading={serviceOrderDetailLoading}
+        onOpenChange={(open) => {
+          setServiceOrderSheetOpen(open);
+          if (!open) {
+            setSelectedServiceOrder(null);
+          }
+        }}
+      />
     </>
   );
 }

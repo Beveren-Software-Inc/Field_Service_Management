@@ -37,3 +37,64 @@ export type AppointmentStatus =
   | "In Progress"
   | "Completed"
   | "Cancelled";
+
+export interface ServiceRequestMovement {
+  name: string;
+  movement_type?: string;
+  destination?: string;
+  movement_date?: string;
+  linked_document_type?: string;
+  linked_document?: string;
+  handled_by?: string;
+}
+
+export interface ServiceRequest {
+  name: string;
+  subject?: string;
+  customer?: string;
+  status: string;
+  posting_date?: string;
+  due_date?: string;
+  serial_no?: string;
+  item_code?: string;
+  item_name?: string;
+  current_product_location?: string;
+  description?: string;
+  product_movement?: ServiceRequestMovement[];
+}
+
+export interface ServiceOrderSummary {
+  name: string;
+  customer?: string;
+  status?: string;
+  priority?: string;
+  posting_date?: string;
+  type?: string;
+}
+
+export interface ServiceOrderItem {
+  item_code?: string;
+  item_name?: string;
+  qty?: number;
+  uom?: string;
+  invoice_status?: string;
+  description?: string;
+}
+
+export interface ServiceOrderDetail extends ServiceOrderSummary {
+  service_request?: string;
+  service_quotation?: string;
+  service_total?: number;
+  spareparts_total?: number;
+  grand_total?: number;
+  company?: string;
+  contact_person?: string;
+  contact_email?: string;
+  service_area?: string;
+  items?: ServiceOrderItem[];
+  notes?: string;
+  priority?: string;
+  status?: string;
+  customer_address?: string;
+  posting_date?: string;
+}
