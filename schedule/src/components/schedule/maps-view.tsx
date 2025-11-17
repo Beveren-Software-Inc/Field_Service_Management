@@ -28,16 +28,13 @@ const STATUS_COLORS: Record<string, { bg: string; border: string; dot: string; h
 
 // Get coordinates from appointment location data
 const getCoordinates = (appointment: Appointment): [number, number] | null => {
-	// If location is an object with lat/lng, use it
 	if (appointment.location && typeof appointment.location === "object" && "lat" in appointment.location && "lng" in appointment.location) {
 		const coords: [number, number] = [appointment.location.lat, appointment.location.lng];
-		// Validate coordinates are valid numbers
 		if (isNaN(coords[0]) || isNaN(coords[1]) || coords[0] === 0 || coords[1] === 0) {
 			return null;
 		}
 		return coords;
 	}
-	// Fallback to random coordinates if no location data
 	return null;
 };
 
@@ -54,6 +51,7 @@ const parseLocalDateTime = (value: string): Date => {
 // Fix Leaflet default icon issue
 if (typeof window !== "undefined") {
 
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
   delete (L.Icon.Default.prototype as any)._getIconUrl;
   L.Icon.Default.mergeOptions({
     iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
@@ -77,7 +75,6 @@ export function MapsView({
 
   // Calculate date range based on duration filter or selected date
   const dateRange = useMemo(() => {
-    // If no duration filter, use selected date (single day)
     if (!durationFilter || durationFilter === "date") {
       return {
         start: startOfDay(selectedDate),
@@ -95,8 +92,8 @@ export function MapsView({
         };
       case "thisWeek":
         return {
-          start: startOfWeek(today, { weekStartsOn: 1 }), // Monday
-          end: endOfWeek(today, { weekStartsOn: 1 }), // Sunday
+          start: startOfWeek(today, { weekStartsOn: 1 }),
+          end: endOfWeek(today, { weekStartsOn: 1 }),
         };
       case "thisMonth":
         return {
@@ -124,7 +121,6 @@ export function MapsView({
         return false;
       }
 
-      // Duration filter - check if appointment scheduled date falls within range
       if (apt.scheduled_start_datetime || apt.posting_date) {
         const appointmentDate = apt.scheduled_start_datetime
           ? parseLocalDateTime(apt.scheduled_start_datetime)
@@ -275,7 +271,6 @@ export function MapsView({
       const group = new L.FeatureGroup(markersRef.current);
       map.fitBounds(group.getBounds().pad(0.1));
     } else {
-      // If no markers, center on a default location (or first appointment's location if available)
       const firstWithLocation = filteredAppointments.find(apt => getCoordinates(apt));
       if (firstWithLocation) {
         const coords = getCoordinates(firstWithLocation);
@@ -286,7 +281,6 @@ export function MapsView({
     }
   }, [filteredAppointments, onAppointmentClick]);
 
-  // Handle custom event for popup button clicks
   useEffect(() => {
     const handleOpenAppointment = (event: CustomEvent) => {
       const appointment = filteredAppointments.find((apt) => apt.name === event.detail);
@@ -295,8 +289,10 @@ export function MapsView({
       }
     };
 
+    //eslint-disable-next-line @typescript-eslint/no-explicit-any
     window.addEventListener("openAppointment" as any, handleOpenAppointment as EventListener);
     return () => {
+      //eslint-disable-next-line @typescript-eslint/no-explicit-any
       window.removeEventListener("openAppointment" as any, handleOpenAppointment as EventListener);
     };
   }, [filteredAppointments, onAppointmentClick]);

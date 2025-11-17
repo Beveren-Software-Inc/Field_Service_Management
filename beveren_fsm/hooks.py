@@ -20,6 +20,7 @@ app_license = "mit"
 # 		"has_permission": "beveren_fsm.api.permission.has_app_permission"
 # 	}
 # ]
+
 fixtures = [
 	# Export your custom "Service Type" doctype
 	"Service Type",
