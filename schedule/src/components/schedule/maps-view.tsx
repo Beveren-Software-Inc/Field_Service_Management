@@ -14,7 +14,7 @@ interface MapsViewProps {
   statusFilter?: string;
   technicianSearch?: string;
   searchQuery?: string;
-  durationFilter?: "today" | "thisWeek" | "thisMonth" | "thisYear";
+  durationFilter?: "date" | "today" | "thisWeek" | "thisMonth" | "thisYear";
 }
 
 const STATUS_COLORS: Record<string, { bg: string; border: string; dot: string; hex: string; bgHex: string; borderHex: string }> = {
@@ -78,7 +78,7 @@ export function MapsView({
   // Calculate date range based on duration filter or selected date
   const dateRange = useMemo(() => {
     // If no duration filter, use selected date (single day)
-    if (!durationFilter) {
+    if (!durationFilter || durationFilter === "date") {
       return {
         start: startOfDay(selectedDate),
         end: endOfDay(selectedDate),

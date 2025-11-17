@@ -46,7 +46,7 @@ export function ScheduleRightPanel({
   const [technicianSearch, setTechnicianSearch] = useState("");
   const [calendarMonth, setCalendarMonth] = useState(selectedDate);
   const [mapSearchQuery, setMapSearchQuery] = useState("");
-  const [mapDurationFilter, setMapDurationFilter] = useState<"today" | "thisWeek" | "thisMonth" | "thisYear" | "">("thisWeek");
+  const [mapDurationFilter, setMapDurationFilter] = useState<"date" | "today" | "thisWeek" | "thisMonth" | "thisYear">("thisWeek");
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window !== "undefined") {
       const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
@@ -55,14 +55,6 @@ export function ScheduleRightPanel({
     }
     return "light";
   });
-
-  // Auto-clear duration filter when a specific date is selected (not today)
-  // Only clear if duration filter is currently set (not already empty)
-  useEffect(() => {
-    if (viewType === "maps" && !isToday(selectedDate) && mapDurationFilter) {
-      setMapDurationFilter("");
-    }
-  }, [selectedDate, viewType]);
 
   // Apply theme to document
   useEffect(() => {
@@ -115,7 +107,7 @@ export function ScheduleRightPanel({
     onDateChange(newDate);
   };
 
-  const shouldShowDateControls = viewType !== "maps" || mapDurationFilter === "";
+  const shouldShowDateControls = viewType !== "maps" || mapDurationFilter === "date";
 
   return (
     <div className="flex flex-col h-full">
@@ -181,20 +173,16 @@ export function ScheduleRightPanel({
           <div className="flex items-center gap-3">
             {viewType === "maps" && (
               <Select
-                value={mapDurationFilter || "date"}
+                value={mapDurationFilter}
                 onValueChange={(
                   value:
+                    | "date"
                     | "today"
                     | "thisWeek"
                     | "thisMonth"
                     | "thisYear"
-                    | "date"
                 ) => {
-                  if (value === "date") {
-                    setMapDurationFilter("");
-                  } else {
-                    setMapDurationFilter(value);
-                  }
+                  setMapDurationFilter(value);
                 }}
               >
                 <SelectTrigger className="w-40">
@@ -335,7 +323,7 @@ export function ScheduleRightPanel({
             statusFilter={statusFilter}
             technicianSearch={technicianSearch}
             searchQuery={mapSearchQuery}
-            durationFilter={mapDurationFilter || undefined}
+            durationFilter={mapDurationFilter}
           />
         )}
         {viewType === "grid" && (
