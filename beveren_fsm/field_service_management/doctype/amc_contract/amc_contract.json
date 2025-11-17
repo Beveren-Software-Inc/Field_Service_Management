@@ -8,10 +8,12 @@
  "field_order": [
   "customer",
   "serial_no",
+  "item_code",
   "currency",
   "column_break_oqaw",
-  "item_code",
+  "contract_start_date",
   "contract_period",
+  "contract_end_date",
   "section_break_floj",
   "total",
   "service_budget",
@@ -21,7 +23,8 @@
   "service_utilized",
   "service_order_reference",
   "column_break_famr",
-  "spare_parts_utilized"
+  "spare_parts_utilized",
+  "amended_from"
  ],
  "fields": [
   {
@@ -52,6 +55,7 @@
    "options": "Item"
   },
   {
+   "default": "1",
    "fieldname": "contract_period",
    "fieldtype": "Int",
    "label": "Contract Period(Months)"
@@ -94,32 +98,64 @@
    "label": "Utilized Amounts"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "service_utilized",
    "fieldtype": "Currency",
+   "ignore_user_permissions": 1,
    "label": "Service Utilized",
-   "options": "currency"
+   "options": "currency",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_famr",
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "spare_parts_utilized",
    "fieldtype": "Currency",
+   "ignore_user_permissions": 1,
    "label": "Spare Parts Utilized",
-   "options": "currency"
+   "options": "currency",
+   "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "service_order_reference",
    "fieldtype": "Link",
+   "ignore_user_permissions": 1,
    "label": "Service Order Reference",
-   "options": "Service Order"
+   "options": "Service Order",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "AMC Contract",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "contract_start_date",
+   "fieldtype": "Date",
+   "label": "Contract Start Date"
+  },
+  {
+   "fieldname": "contract_end_date",
+   "fieldtype": "Date",
+   "label": "Contract End Date",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2025-11-11 03:37:06.959996",
+ "modified": "2025-11-17 03:18:28.906616",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "AMC Contract",

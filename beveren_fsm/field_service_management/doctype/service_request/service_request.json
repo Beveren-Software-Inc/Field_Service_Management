@@ -323,9 +323,11 @@
    "options": "\nOnsite\nWorkshop\nVendor"
   },
   {
+   "depends_on": "eval:doc.warranty_amc_status===\"Under AMC\"",
    "fieldname": "amc_contract",
    "fieldtype": "Link",
    "label": "AMC Contract",
+   "mandatory_depends_on": "eval:doc.warranty_amc_status===\"Under AMC\"",
    "options": "AMC Contract"
   },
   {
@@ -369,7 +371,7 @@
    "link_fieldname": "service_request"
   }
  ],
- "modified": "2025-11-12 03:47:46.091331",
+ "modified": "2025-11-17 03:13:18.909917",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Service Request",
