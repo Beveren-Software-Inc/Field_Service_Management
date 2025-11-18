@@ -1,6 +1,6 @@
-import { ServiceRequest } from "../pages/schedule/types";
+import { ServiceOrderSummary } from "../pages/schedule/types";
 
-interface ServiceRequestFilters {
+interface ServiceOrderFilters {
   status?: string;
   startDate?: Date | null;
   endDate?: Date | null;
@@ -8,7 +8,9 @@ interface ServiceRequestFilters {
   limit?: number;
 }
 
-export async function fetchServiceRequests(filters: ServiceRequestFilters = {}): Promise<ServiceRequest[]> {
+export async function fetchServiceOrdersForTracking(
+  filters: ServiceOrderFilters = {}
+): Promise<ServiceOrderSummary[]> {
   try {
     //eslint-disable-next-line @typescript-eslint/no-explicit-any
     const csrfToken = (window as any).csrf_token;
@@ -34,7 +36,7 @@ export async function fetchServiceRequests(filters: ServiceRequestFilters = {}):
       params.append("limit_page_length", String(filters.limit));
     }
 
-    const url = `/api/method/beveren_fsm.field_service_management.api.service_request.get_service_requests?${
+    const url = `/api/method/beveren_fsm.field_service_management.api.service_order.get_service_orders_for_tracking?${
       params.toString()
     }`;
 
@@ -48,13 +50,13 @@ export async function fetchServiceRequests(filters: ServiceRequestFilters = {}):
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch service requests: ${response.statusText}`);
+      throw new Error(`Failed to fetch service orders: ${response.statusText}`);
     }
 
     const result = await response.json();
     return result.message || [];
   } catch (error) {
-    console.error("Error fetching service requests:", error);
+    console.error("Error fetching service orders:", error);
     throw error;
   }
 }

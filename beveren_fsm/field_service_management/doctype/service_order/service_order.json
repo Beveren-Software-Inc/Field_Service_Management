@@ -18,7 +18,6 @@
   "column_break_llgp",
   "posting_date",
   "due_date",
-  "amc_contract",
   "column_break_ralr",
   "priority",
   "company",
@@ -88,6 +87,7 @@
   "column_break_gakd",
   "warranty_amc_status",
   "warranty_expiry_date",
+  "amc_contract",
   "amc_expiry_date",
   "appointment_preference_section",
   "preferred_date_1",
@@ -756,6 +756,7 @@
    "options": "Service Area"
   },
   {
+   "depends_on": "eval:doc.warranty_amc_status==\"Under AMC\"",
    "fieldname": "amc_contract",
    "fieldtype": "Link",
    "label": "AMC Contract",
@@ -813,6 +814,7 @@
    "fieldtype": "Table",
    "ignore_user_permissions": 1,
    "label": "Product Tracker",
+   "no_copy": 1,
    "options": "Product Movement",
    "read_only": 1
   },
@@ -822,6 +824,7 @@
    "fieldname": "product_location",
    "fieldtype": "Data",
    "label": "Product Location",
+   "no_copy": 1,
    "read_only": 1
   }
  ],
@@ -837,7 +840,7 @@
    "link_fieldname": "custom_reference_service_document"
   }
  ],
- "modified": "2025-11-18 03:10:34.985668",
+ "modified": "2025-11-18 05:19:20.178318",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Service Order",

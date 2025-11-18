@@ -30,7 +30,7 @@ export function SidebarMenu({
 
   const menuItems: MenuItem[] = [
     { icon: Home, label: "Home", key: "home", onClick: onScheduleClick },
-    { icon: ClipboardList, label: "Requests", key: "requests", onClick: onRequestsClick },
+    { icon: ClipboardList, label: "Product Movement", key: "requests", onClick: onRequestsClick },
     { icon: Users, label: "Technicians", key: "technicians", onClick: onTechniciansClick },
     { icon: Settings, label: "Settings", key: "settings", onClick: onSettingsClick },
   ];

@@ -15,22 +15,22 @@ import { format } from "date-fns";
 
 const STATUS_OPTIONS = [
   "Open",
-  "Quotation",
-  "Converted",
-  "Due Soon",
-  "Overdue",
-  "On Hold",
-  "Closed",
+  "Scheduled",
+  "Dispatched",
+  "In Progress",
+  "Review",
+  "Completed",
+  "Cancelled",
 ];
 
 const statusColors: Record<string, string> = {
-  Open: "bg-blue-100 text-blue-800 border-blue-300",
-  "Due Soon": "bg-amber-100 text-amber-800 border-amber-300",
-  Overdue: "bg-red-100 text-red-800 border-red-300",
-  Converted: "bg-emerald-100 text-emerald-800 border-emerald-300",
-  "On Hold": "bg-gray-200 text-gray-800 border-gray-300",
-  Quotation: "bg-indigo-100 text-indigo-800 border-indigo-300",
-  Closed: "bg-slate-100 text-slate-800 border-slate-300",
+  Open: "bg-cyan-100 text-cyan-800 border-cyan-300",
+  Scheduled: "bg-blue-100 text-blue-800 border-blue-300",
+  Dispatched: "bg-purple-100 text-purple-800 border-purple-300",
+  "In Progress": "bg-orange-100 text-orange-800 border-orange-300",
+  Review: "bg-pink-100 text-pink-800 border-pink-300",
+  Completed: "bg-green-100 text-green-800 border-green-300",
+  Cancelled: "bg-gray-200 text-gray-700 border-gray-300",
 };
 
 const formatDate = (value?: string) => {
@@ -112,7 +112,7 @@ export function ServiceOrdersView() {
     <div className="flex flex-1 h-full bg-background">
       {/* Left Pane */}
       <div className="w-[25%] border-r border-border flex flex-col bg-card/40">
-        <div className="p-4 border-b border-border space-y-3">
+        <div className="p-4 border-b border-border space-y-3 bg-card">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold">Service Orders</h2>
@@ -163,7 +163,7 @@ export function ServiceOrdersView() {
 
             {!loading && filteredOrders.length === 0 && (
               <div className="text-center text-sm text-muted-foreground py-10">
-                No service requests found
+                No service orders found
               </div>
             )}
 
@@ -209,19 +209,18 @@ export function ServiceOrdersView() {
       <div className="flex-1 overflow-hidden">
         {selectedOrder ? (
           <div className="h-full flex flex-col">
-            <div className="border-b border-border px-6 py-4 bg-card/60 flex items-center justify-between">
+            <div className="border-b border-border px-6 py-4 bg-gradient-to-b from-primary/60 via-primary/45 to-primary/20 flex items-center justify-between text-primary-foreground shadow-sm">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
-                  Service Order
-                </p>
-                <h2 className="text-2xl font-semibold">
+
+                <h2 className="text-2xl font-semibold drop-shadow-sm">
                   {selectedOrder.name}
                 </h2>
-                <p className="text-sm text-muted-foreground">
-                  {selectedOrder.customer || "No customer specified"}
-                </p>
+
               </div>
-              <Badge variant="outline" className={statusColors[selectedOrder.status || ""] ?? ""}>
+              <Badge
+                variant="outline"
+                className={`${statusColors[selectedOrder.status || ""] ?? "bg-white text-primary border-white"} shadow-md`}
+              >
                 {selectedOrder.status || "Unknown"}
               </Badge>
             </div>
@@ -243,7 +242,7 @@ export function ServiceOrdersView() {
                   <div className="p-4 border rounded-lg bg-card shadow-sm">
                     <p className="text-xs text-muted-foreground uppercase">Current Location</p>
                     <p className="text-lg font-semibold">
-                      {selectedOrder.current_product_location || "Unknown"}
+                      {selectedOrder.product_location || "Unknown"}
                     </p>
                   </div>
                   <div className="p-4 border rounded-lg bg-card shadow-sm">

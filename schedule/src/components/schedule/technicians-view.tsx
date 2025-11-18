@@ -126,11 +126,11 @@ export function TechniciansView({
                     {/* Technician Info */}
                     <div className="mb-3">
                       <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-semibold text-sm">{technician.full_name}</h3>
+                        <h3 className="text-sm font-medium text-foreground">{technician.full_name}</h3>
                         {techAppointments.length > 0 && (
-                          <Badge variant="outline" className="text-xs">
-                            {techAppointments.length} {techAppointments.length === 1 ? "appointment" : "appointments"}
-                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {techAppointments.length} {techAppointments.length === 1 ? "appt" : "appts"}
+                          </span>
                         )}
                       </div>
                       {technician.service_area && (
@@ -162,7 +162,7 @@ export function TechniciansView({
                               }}
                             >
                               <div className="flex items-center justify-between mb-1">
-                                <span className="text-xs font-medium truncate">
+                                <span className="text-xs font-medium truncate text-foreground">
                                   {appointment.service_order || appointment.name}
                                 </span>
                                 <Badge

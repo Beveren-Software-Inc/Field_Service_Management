@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
-from frappe.utils import flt, today
+from frappe.utils import flt, getdate, today
 
 LOCATION_STATUS_MAP = {
 	"delivered to customer": "Review",
@@ -489,10 +489,12 @@ def make_delivery_note(service_order: str, items=None, product_location: str | N
 def make_purchase_receipt(service_order: str, items=None, product_location: str | None = None):
 	order = frappe.get_doc("Service Order", service_order)
 
-	if not order.service_request:
-		frappe.throw(_("Service Order {0} is not linked to a Service Request").format(order.name))
-
-	service_request = frappe.get_doc("Service Request", order.service_request)
+	service_request = None
+	if order.service_request:
+		try:
+			service_request = frappe.get_doc("Service Request", order.service_request)
+		except frappe.DoesNotExistError:
+			service_request = None
 
 	# if not service_request.repair_vendor:
 	# 	frappe.throw(
@@ -504,8 +506,12 @@ def make_purchase_receipt(service_order: str, items=None, product_location: str 
 	purchase_receipt = frappe.new_doc("Purchase Receipt")
 	purchase_receipt.company = order.company
 	purchase_receipt.posting_date = today()
-	purchase_receipt.supplier = service_request.repair_vendor
-	purchase_receipt.supplier_address = service_request.customer_address
+	purchase_receipt.supplier = getattr(order, "repair_vendor", None) or getattr(
+		service_request, "repair_vendor", None
+	)
+	purchase_receipt.supplier_address = getattr(order, "supplier_address", None) or getattr(
+		service_request, "customer_address", None
+	)
 	purchase_receipt.tc_name = getattr(order, "tc_name", None)
 	purchase_receipt.terms = getattr(order, "terms", None)
 	purchase_receipt.custom_service_order = order.name
@@ -656,10 +662,12 @@ def make_purchase_receipt(service_order: str, items=None, product_location: str 
 def make_purchase_order(service_order: str, items=None, product_location: str | None = None):
 	order = frappe.get_doc("Service Order", service_order)
 
-	if not order.service_request:
-		frappe.throw(_("Service Order {0} is not linked to a Service Request").format(order.name))
-
-	service_request = frappe.get_doc("Service Request", order.service_request)
+	service_request = None
+	if order.service_request:
+		try:
+			service_request = frappe.get_doc("Service Request", order.service_request)
+		except frappe.DoesNotExistError:
+			service_request = None
 
 	# if not service_request.repair_vendor:
 	# 	frappe.throw(
@@ -672,7 +680,9 @@ def make_purchase_order(service_order: str, items=None, product_location: str | 
 	purchase_order.company = order.company
 	purchase_order.transaction_date = today()
 	purchase_order.schedule_date = today()
-	purchase_order.supplier = service_request.repair_vendor
+	purchase_order.supplier = getattr(order, "repair_vendor", None) or getattr(
+		service_request, "repair_vendor", None
+	)
 	purchase_order.tc_name = getattr(order, "tc_name", None)
 	purchase_order.terms = getattr(order, "terms", None)
 	purchase_order.custom_service_order = order.name
@@ -821,10 +831,12 @@ def make_purchase_order(service_order: str, items=None, product_location: str | 
 def make_purchase_invoice(service_order: str, items=None, product_location: str | None = None):
 	order = frappe.get_doc("Service Order", service_order)
 
-	if not order.service_request:
-		frappe.throw(_("Service Order {0} is not linked to a Service Request").format(order.name))
-
-	service_request = frappe.get_doc("Service Request", order.service_request)
+	service_request = None
+	if order.service_request:
+		try:
+			service_request = frappe.get_doc("Service Request", order.service_request)
+		except frappe.DoesNotExistError:
+			service_request = None
 
 	# if not service_request.repair_vendor:
 	# 	frappe.throw(
@@ -836,7 +848,9 @@ def make_purchase_invoice(service_order: str, items=None, product_location: str 
 	purchase_invoice = frappe.new_doc("Purchase Invoice")
 	purchase_invoice.company = order.company
 	purchase_invoice.posting_date = today()
-	purchase_invoice.supplier = service_request.repair_vendor
+	purchase_invoice.supplier = getattr(order, "repair_vendor", None) or getattr(
+		service_request, "repair_vendor", None
+	)
 	purchase_invoice.tc_name = getattr(order, "tc_name", None)
 	purchase_invoice.terms = getattr(order, "terms", None)
 	purchase_invoice.custom_service_order = order.name

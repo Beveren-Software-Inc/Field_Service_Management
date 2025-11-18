@@ -29,7 +29,7 @@ interface ScheduleState {
   leftPanelView: "appointments" | "technicians"; // Track left panel view mode
   leftListMode: "orders" | "appointments"; // Track list content within schedule view
   settingsView: boolean; // Track if settings view is open
-  requestsView: boolean; // Track if service requests view is active
+  requestsView: boolean; // Track if service orders tracker view is active
 
   // Actions
   setAppointments: (appointments: Appointment[]) => void;
@@ -71,10 +71,23 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
   statusFilter: "all",
   serviceOrderStatusFilter: "all",
   viewType: getInitialViewType(),
-  leftPanelView: "appointments",
-  leftListMode: "orders",
-  settingsView: false, // Settings view closed by default
-  requestsView: false,
+  leftPanelView: ((): "appointments" | "technicians" => {
+    if (typeof window === "undefined") return "appointments";
+    const saved = localStorage.getItem("schedule-left-panel-view");
+    return saved === "technicians" ? "technicians" : "appointments";
+  })(),
+  leftListMode:
+    (typeof window !== "undefined" && localStorage.getItem("schedule-left-list-mode") === "appointments")
+      ? "appointments"
+      : (typeof window !== "undefined" && localStorage.getItem("schedule-left-list-mode") === "orders")
+      ? "orders"
+      : "appointments",
+  settingsView:
+    (typeof window !== "undefined" && localStorage.getItem("schedule-settings-view") === "1") ||
+    false,
+  requestsView:
+    (typeof window !== "undefined" && localStorage.getItem("schedule-requests-view") === "1") ||
+    false,
 
   // Actions
   setAppointments: (appointments) => set({ appointments }),
@@ -110,10 +123,34 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
       localStorage.setItem("schedule-view-type", view);
     }
   },
-  setLeftPanelView: (view) => set({ leftPanelView: view }),
-  setLeftListMode: (mode) => set({ leftListMode: mode }),
-  setSettingsView: (open) => set({ settingsView: open }),
-  setRequestsView: (open) => set({ requestsView: open }),
+  setLeftPanelView: (view) =>
+    set(() => {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("schedule-left-panel-view", view);
+      }
+      return { leftPanelView: view };
+    }),
+  setLeftListMode: (mode) =>
+    set(() => {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("schedule-left-list-mode", mode);
+      }
+      return { leftListMode: mode };
+    }),
+  setSettingsView: (open) =>
+    set(() => {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("schedule-settings-view", open ? "1" : "0");
+      }
+      return { settingsView: open };
+    }),
+  setRequestsView: (open) =>
+    set(() => {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("schedule-requests-view", open ? "1" : "0");
+      }
+      return { requestsView: open };
+    }),
 
   // Helper getters
   isAppointmentSelected: (appointmentId) => {

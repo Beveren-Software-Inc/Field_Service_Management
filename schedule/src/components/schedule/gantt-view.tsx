@@ -552,11 +552,29 @@ export function GanttView({
               </div>
               <div>
                 <label className="text-xs text-muted-foreground">Scheduled Start</label>
-                <input type="datetime-local" className="w-full border border-input rounded px-2 py-1 text-sm bg-background text-foreground" value={createStart ? `${createStart.getFullYear()}-${String(createStart.getMonth()+1).padStart(2,'0')}-${String(createStart.getDate()).padStart(2,'0')}T${String(createStart.getHours()).padStart(2,'0')}:${String(createStart.getMinutes()).padStart(2,'0')}` : ""} onChange={(e) => setCreateStart(new Date(e.target.value))} />
+                <input
+                  type="datetime-local"
+                  className="w-full border border-input rounded px-2 py-1 text-sm bg-background text-foreground"
+                  value={
+                    createStart
+                      ? `${createStart.getFullYear()}-${String(createStart.getMonth() + 1).padStart(2, "0")}-${String(createStart.getDate()).padStart(2, "0")}T${String(createStart.getHours()).padStart(2, "0")}:${String(createStart.getMinutes()).padStart(2, "0")}`
+                      : ""
+                  }
+                  onChange={(e) => setCreateStart(new Date(e.target.value))}
+                />
               </div>
               <div>
                 <label className="text-xs text-muted-foreground">Scheduled Finish</label>
-                <input type="datetime-local" className="w-full border border-input rounded px-2 py-1 text-sm bg-background text-foreground" value={createFinish ? `${createFinish.getFullYear()}-${String(createFinish.getMonth()+1).padStart(2,'0')}-${String(createFinish.getDate()).padStart(2,'0')}T${String(createFinish.getHours()).padStart(2,'0')}:${String(createFinish.getMinutes()).padStart(2,'0')}` : ""} onChange={(e) => setCreateFinish(new Date(e.target.value))} />
+                <input
+                  type="datetime-local"
+                  className="w-full border border-input rounded px-2 py-1 text-sm bg-background text-foreground"
+                  value={
+                    createFinish
+                      ? `${createFinish.getFullYear()}-${String(createFinish.getMonth() + 1).padStart(2, "0")}-${String(createFinish.getDate()).padStart(2, "0")}T${String(createFinish.getHours()).padStart(2, "0")}:${String(createFinish.getMinutes()).padStart(2, "0")}`
+                      : ""
+                  }
+                  onChange={(e) => setCreateFinish(new Date(e.target.value))}
+                />
               </div>
               <div className="sm:col-span-1">
                 <label className="text-xs text-muted-foreground">Technicians</label>

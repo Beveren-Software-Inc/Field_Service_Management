@@ -32,6 +32,12 @@ export type ViewType = "gantt" | "grid" | "maps" | "calendar";
 
 export type AppointmentStatus =
   | "Open"
+  | "Quotation"
+  | "Converted"
+  | "Due Soon"
+  | "Overdue"
+  | "On Hold"
+  | "Closed"
   | "Scheduled"
   | "Dispatched"
   | "In Progress"
@@ -49,28 +55,21 @@ export interface ServiceRequestMovement {
   service_order?: string;
 }
 
-export interface ServiceRequest {
-  name: string;
-  subject?: string;
-  customer?: string;
-  status: string;
-  posting_date?: string;
-  due_date?: string;
-  serial_no?: string;
-  item_code?: string;
-  item_name?: string;
-  current_product_location?: string;
-  description?: string;
-  product_movement?: ServiceRequestMovement[];
-}
-
 export interface ServiceOrderSummary {
   name: string;
+  subject?: string;
   customer?: string;
   status?: string;
   priority?: string;
   posting_date?: string;
+  due_date?: string;
   type?: string;
+  serial_no?: string;
+  item_code?: string;
+  current_product_location?: string;
+  product_location?: string;
+  description?: string;
+  product_movement?: ServiceRequestMovement[];
 }
 
 export interface ServiceOrderItem {
@@ -94,8 +93,5 @@ export interface ServiceOrderDetail extends ServiceOrderSummary {
   service_area?: string;
   items?: ServiceOrderItem[];
   notes?: string;
-  priority?: string;
-  status?: string;
   customer_address?: string;
-  posting_date?: string;
 }

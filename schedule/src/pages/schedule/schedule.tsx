@@ -8,8 +8,8 @@ import { SidebarMenu } from "../../components/layout/sidebar-menu";
 import { useScheduleStore } from "../../store";
 import { fetchAppointmentsWithFilter, fetchServiceOrders } from "../../hooks/use-appointments";
 import { Toaster } from "../../components/ui/sonner";
-import { useEffect, useState } from "react";
-import { ServiceRequestsView } from "../../components/service-request/service-requests-view";
+import { useCallback, useEffect, useState } from "react";
+import { ServiceOrdersView } from "../../components/service-request/product-tracking";
 
 export default function SchedulePage() {
   const [direction, setDirection] = useState<'ltr' | 'rtl'>('ltr');
@@ -64,20 +64,11 @@ export default function SchedulePage() {
     setRequestsView,
     setServiceOrders,
     setServiceOrdersLoading,
-    toggleAppointmentSelection,
     selectAllAppointments,
     clearSelectedAppointments,
   } = useScheduleStore();
 
-  useEffect(() => {
-    loadAppointments();
-  }, [appointmentDateRange.startDate, appointmentDateRange.endDate, statusFilter]);
-
-  useEffect(() => {
-    loadServiceOrders();
-  }, []);
-
-  const loadAppointments = async () => {
+  const loadAppointments = useCallback(async () => {
     try {
       setLoading(true);
       const data = await fetchAppointmentsWithFilter(
@@ -91,9 +82,15 @@ export default function SchedulePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    appointmentDateRange.startDate,
+    appointmentDateRange.endDate,
+    statusFilter,
+    setAppointments,
+    setLoading,
+  ]);
 
-  const loadServiceOrders = async () => {
+  const loadServiceOrders = useCallback(async () => {
     try {
       setServiceOrdersLoading(true);
       const data = await fetchServiceOrders();
@@ -103,7 +100,15 @@ export default function SchedulePage() {
     } finally {
       setServiceOrdersLoading(false);
     }
-  };
+  }, [setServiceOrders, setServiceOrdersLoading]);
+
+  useEffect(() => {
+    loadAppointments();
+  }, [loadAppointments]);
+
+  useEffect(() => {
+    loadServiceOrders();
+  }, [loadServiceOrders]);
 
   const handleAppointmentSelect = (appointmentId: string, checked: boolean) => {
     if (checked) {
@@ -169,9 +174,9 @@ export default function SchedulePage() {
             <div className="flex-1 flex flex-col overflow-hidden">
               <SettingsView onBack={() => setSettingsView(false)} />
             </div>
-          ) : requestsView ? (
+      ) : requestsView ? (
             <div className="flex-1 flex flex-col overflow-hidden">
-              <ServiceRequestsView />
+          <ServiceOrdersView />
             </div>
           ) : (
             <>

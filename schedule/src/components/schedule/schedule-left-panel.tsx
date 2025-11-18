@@ -25,18 +25,25 @@ import { fetchServiceOrderDetail } from "../../hooks/use-appointments";
 
 const STATUS_OPTIONS: AppointmentStatus[] = [
   "Open",
-  "Scheduled",
-  "Dispatched",
-  "In Progress",
-  "Completed",
-  "Cancelled"
+  "Quotation",
+  "Converted",
+  "Due Soon",
+  "Overdue",
+  "On Hold",
+  "Closed",
 ];
 
 const getStatusColor = (status: AppointmentStatus): string => {
   const colors: Record<AppointmentStatus, string> = {
     Open: "bg-blue-100 text-blue-800 border-blue-300",
+    Quotation: "bg-indigo-100 text-indigo-800 border-indigo-300",
+    Converted: "bg-emerald-100 text-emerald-800 border-emerald-300",
+    "Due Soon": "bg-amber-100 text-amber-800 border-amber-300",
+    Overdue: "bg-red-100 text-red-800 border-red-300",
+    "On Hold": "bg-gray-200 text-gray-800 border-gray-300",
+    Closed: "bg-slate-100 text-slate-800 border-slate-300",
     Scheduled: "bg-blue-100 text-blue-800 border-blue-300",
-    Dispatched: "bg-orange-100 text-orange-800 border-orange-300",
+    Dispatched: "bg-purple-100 text-purple-800 border-purple-300",
     "In Progress": "bg-orange-100 text-orange-800 border-orange-300",
     Completed: "bg-green-100 text-green-800 border-green-300",
     Cancelled: "bg-gray-100 text-gray-800 border-gray-300",
@@ -147,23 +154,18 @@ export function ScheduleLeftPanel({
     }
   };
 
-  const getOrderStatusColor = (status?: string) => {
-    if (!status) return "border-border text-muted-foreground";
-    const normalized = status.toLowerCase();
-    if (normalized.includes("open") || normalized.includes("pending")) {
-      return "bg-blue-50 text-blue-700 border-blue-200";
-    }
-    if (normalized.includes("progress") || normalized.includes("dispatch")) {
-      return "bg-orange-50 text-orange-700 border-orange-200";
-    }
-    if (normalized.includes("complete") || normalized.includes("closed")) {
-      return "bg-green-50 text-green-700 border-green-200";
-    }
-    if (normalized.includes("cancel")) {
-      return "bg-gray-50 text-gray-600 border-gray-200";
-    }
-    return "border-border text-muted-foreground";
-  };
+const getOrderStatusColor = (status?: string) => {
+  if (!status) return "border-border text-muted-foreground";
+  const normalized = status.toLowerCase();
+  if (normalized === "open") return "bg-cyan-50 text-cyan-700 border-cyan-200";
+  if (normalized === "scheduled") return "bg-blue-50 text-blue-700 border-blue-200";
+  if (normalized === "dispatched") return "bg-purple-50 text-purple-700 border-purple-200";
+  if (normalized === "in progress") return "bg-orange-50 text-orange-700 border-orange-200";
+  if (normalized === "review") return "bg-pink-50 text-pink-700 border-pink-200";
+  if (normalized === "completed") return "bg-green-50 text-green-700 border-green-200";
+  if (normalized === "cancelled") return "bg-gray-100 text-gray-700 border-gray-200";
+  return "border-border text-muted-foreground";
+};
 
   const getOrderPriorityColor = (priority?: string) => {
     if (!priority) return "border-border text-muted-foreground";
@@ -567,9 +569,7 @@ export function ScheduleLeftPanel({
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium truncate">
-                              {appointment.service_order || appointment.name}
-                            </span>
+                            <span className="text-sm font-medium truncate">{appointment.name}</span>
                             <Badge
                               variant="outline"
                               className={`text-xs ${getStatusColor(appointment.status)}`}
@@ -577,6 +577,11 @@ export function ScheduleLeftPanel({
                               {appointment.status}
                             </Badge>
                           </div>
+                          {appointment.service_order && (
+                            <p className="text-[11px] text-muted-foreground mb-1">
+                              Order: {appointment.service_order}
+                            </p>
+                          )}
                           <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
                             {getShortDescription(appointment)}
                           </p>
