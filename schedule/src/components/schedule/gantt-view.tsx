@@ -23,10 +23,9 @@ interface Technician {
 }
 
 const ALL_HOURS = Array.from({ length: 24 }, (_, i) => i); // 0-23
-const DEFAULT_START_HOUR = 8; // 6am
-const DEFAULT_END_HOUR = 20; // 6pm
-
 const TECHNICIAN_ROW_HEIGHT = 60; // Fixed height per technician row (compact, shows 2 arrows worth)
+const HOUR_COLUMN_WIDTH = 80;
+const TIMELINE_WIDTH = ALL_HOURS.length * HOUR_COLUMN_WIDTH;
 
 export function GanttView({
   appointments,
@@ -36,8 +35,6 @@ export function GanttView({
 }: GanttViewProps) {
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [loading, setLoading] = useState(true);
-  const [visibleStartHour, setVisibleStartHour] = useState(DEFAULT_START_HOUR);
-  const [visibleEndHour, setVisibleEndHour] = useState(DEFAULT_END_HOUR);
   const [createOpen, setCreateOpen] = useState(false);
   const [createStart, setCreateStart] = useState<Date | null>(null);
   const [createFinish, setCreateFinish] = useState<Date | null>(null);
@@ -50,6 +47,8 @@ export function GanttView({
   const [optionsServiceOrders, setOptionsServiceOrders] = useState<Array<{name: string; customer?: string; type?: string}>>([]);
   const [optionsServiceTypes, setOptionsServiceTypes] = useState<Array<{name: string}>>([]);
   const [optionsItems, setOptionsItems] = useState<Array<{name: string; item_name?: string; standard_rate?: number}>>([]);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
   useEffect(() => {
     // Load master data for create modal
@@ -172,41 +171,34 @@ export function GanttView({
   };
 
 
-  const visibleHours = ALL_HOURS.slice(visibleStartHour, visibleEndHour + 1);
-  const visibleHoursCount = visibleEndHour - visibleStartHour + 1;
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const timelineContentRef = useRef<HTMLDivElement>(null);
 
-  const canScrollLeft = visibleStartHour > 0;
-  const canScrollRight = visibleEndHour < 23;
-
-  const scrollLeft = () => {
-    if (canScrollLeft) {
-      const newStart = Math.max(0, visibleStartHour - 3);
-      const hoursToShow = visibleEndHour - newStart + 1;
-      if (hoursToShow > 12) {
-        setVisibleStartHour(newStart);
-        setVisibleEndHour(newStart + 11);
-      } else {
-        setVisibleStartHour(newStart);
-      }
-    }
+  const scrollTimeline = (direction: "left" | "right") => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const delta = direction === "left" ? -HOUR_COLUMN_WIDTH * 3 : HOUR_COLUMN_WIDTH * 3;
+    container.scrollBy({ left: delta, behavior: "smooth" });
   };
 
-  const scrollRight = () => {
-    if (canScrollRight) {
-      const newEnd = Math.min(23, visibleEndHour + 3);
-      const hoursToShow = newEnd - visibleStartHour + 1;
-      if (hoursToShow > 12) {
-        setVisibleStartHour(newEnd - 11);
-        setVisibleEndHour(newEnd);
-      } else {
-        setVisibleEndHour(newEnd);
-      }
-    }
-  };
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
 
-  const timelineRef = useRef<HTMLDivElement>(null);
+    const updateScrollState = () => {
+      const maxScrollLeft = container.scrollWidth - container.clientWidth;
+      setCanScrollLeft(container.scrollLeft > 0);
+      setCanScrollRight(container.scrollLeft < maxScrollLeft - 1);
+    };
 
-  const hourColumnWidth = 80; // keep in sync with rendering
+    updateScrollState();
+    container.addEventListener("scroll", updateScrollState);
+    window.addEventListener("resize", updateScrollState);
+    return () => {
+      container.removeEventListener("scroll", updateScrollState);
+      window.removeEventListener("resize", updateScrollState);
+    };
+  }, []);
 
   const toFrappeDateTime = (date: Date) => {
     const pad = (n: number) => String(n).padStart(2, "0");
@@ -220,6 +212,15 @@ export function GanttView({
 
 
 
+  const getMinutesFromPointer = (clientX: number) => {
+    const timeline = timelineContentRef.current;
+    if (!timeline) return 0;
+    const rect = timeline.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const clampedX = Math.max(0, Math.min(x, TIMELINE_WIDTH));
+    return Math.max(0, Math.round((clampedX / HOUR_COLUMN_WIDTH) * 60));
+  };
+
   const handleDropOnTech = async (e: React.DragEvent, tech: Technician) => {
     try {
       e.preventDefault();
@@ -228,14 +229,7 @@ export function GanttView({
       const data = JSON.parse(raw);
       if (data.type !== "appointment" || !data.id) return;
 
-      // Compute start time from pointer position within timeline grid
-      const timeline = timelineRef.current;
-      if (!timeline) return;
-      const rect = timeline.getBoundingClientRect();
-      const x = e.clientX - rect.left; // px from left of timeline
-      const hoursFromVisibleStart = x / hourColumnWidth;
-      const minutesFromVisibleStart = Math.max(0, Math.round(hoursFromVisibleStart * 60));
-      const absoluteMinutes = visibleStartHour * 60 + minutesFromVisibleStart;
+      const absoluteMinutes = getMinutesFromPointer(e.clientX);
 
       // Snap to nearest 15 minutes
       const snappedMinutes = Math.round(absoluteMinutes / 15) * 15;
@@ -273,28 +267,17 @@ export function GanttView({
     if (!showNowLine) return null as number | null;
     const now = new Date();
     const minutes = now.getHours() * 60 + now.getMinutes();
-    const visibleStartMinutes = visibleStartHour * 60;
-    const adjusted = minutes - visibleStartMinutes;
-    const leftPx = adjusted * (hourColumnWidth / 60);
-    // Debug: current time and computed pixel position
-    // eslint-disable-next-line no-console
-    console.log(
-      "[Gantt] Now:", now.toISOString(),
-      "| HH:mm:", `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
-      "| visibleStartHour:", visibleStartHour,
-      "| leftPx:", leftPx
-    );
-    return leftPx;
-  }, [showNowLine, visibleStartHour]);
+    return (minutes / 60) * HOUR_COLUMN_WIDTH;
+  }, [showNowLine]);
 
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Gantt Content */}
-      <div className="flex-1 overflow-auto relative">
+      <div className="flex-1 overflow-auto relative" ref={scrollContainerRef}>
 
-        <div className="flex h-full">
+        <div className="flex h-full min-w-max">
           {/* Technician Names Column - Narrow */}
-          <div className="w-32 border-r border-border bg-card sticky left-0 z-10">
+          <div className="w-32 border-r border-border bg-card sticky left-0 z-20">
             <div className="sticky top-0 bg-card border-b border-border px-2 py-2 font-semibold text-xs h-[40px] flex items-center">
               Technicians
             </div>
@@ -322,8 +305,9 @@ export function GanttView({
           </div>
 
           {/* Timeline Grid */}
-          <div className="flex-1 relative" ref={timelineRef}
-            onDragOver={(e) => e.preventDefault()}
+          <div
+            className="relative flex-shrink-0"
+            style={{ width: `${TIMELINE_WIDTH}px` }}
           >
             {/* Time Column Headers with Scroll Arrows */}
             <div className="sticky top-0 bg-card border-b border-border z-20 flex relative items-center h-[40px]">
@@ -333,19 +317,22 @@ export function GanttView({
                   variant="outline"
                   size="icon"
                   className="absolute left-1 top-1/2 -translate-y-1/2 z-30 bg-background shadow-md hover:shadow-lg h-7 w-7"
-                  onClick={scrollLeft}
+                  onClick={() => scrollTimeline("left")}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
               )}
 
               {/* Time Labels */}
-              <div className={cn("flex flex-1", canScrollLeft && "ml-10", canScrollRight && "mr-10")}>
-                {visibleHours.map((hour) => (
+              <div
+                className={cn("flex", canScrollLeft && "ml-10", canScrollRight && "mr-10")}
+                style={{ width: `${TIMELINE_WIDTH}px` }}
+              >
+                {ALL_HOURS.map((hour) => (
                   <div
                     key={hour}
-                    className="flex-1 border-r border-border px-2 py-2 text-center text-xs font-medium"
-                    style={{ minWidth: "80px" }}
+                    className="flex-none border-r border-border px-2 py-2 text-center text-xs font-medium"
+                    style={{ width: `${HOUR_COLUMN_WIDTH}px` }}
                   >
                     {hour.toString().padStart(2, "0")}:00
                   </div>
@@ -358,7 +345,7 @@ export function GanttView({
                   variant="outline"
                   size="icon"
                   className="absolute right-1 top-1/2 -translate-y-1/2 z-30 bg-background shadow-md hover:shadow-lg h-7 w-7"
-                  onClick={scrollRight}
+                  onClick={() => scrollTimeline("right")}
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -366,7 +353,11 @@ export function GanttView({
             </div>
 
             {/* Technician Rows with Appointments */}
-            <div className="relative">
+            <div
+              className="relative"
+              ref={timelineContentRef}
+              onDragOver={(e) => e.preventDefault()}
+            >
                 {/* Current time vertical line */}
                 {showNowLine && nowLeftPx !== null && (
                   <div
@@ -385,12 +376,7 @@ export function GanttView({
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => handleDropOnTech(e, tech)}
                     onDoubleClick={(e) => {
-                      const timeline = timelineRef.current;
-                      if (!timeline) return;
-                      const rect = timeline.getBoundingClientRect();
-                      const x = e.clientX - rect.left;
-                      const minutesFromVisibleStart = Math.max(0, Math.round((x / 80) * 60));
-                      const absoluteMinutes = visibleStartHour * 60 + minutesFromVisibleStart;
+                      const absoluteMinutes = getMinutesFromPointer(e.clientX);
                       const start = new Date(selectedDate);
                       start.setHours(0, 0, 0, 0);
                       start.setMinutes(Math.round(absoluteMinutes / 15) * 15);
@@ -401,22 +387,19 @@ export function GanttView({
                       setCreateOpen(true);
                     }}
                   >
-                    {/* Hour Grid Lines - Scaled to fit row height */}
-                    <div className="absolute inset-0">
-                      {visibleHours.map((hour, idx) => {
-                        // Scale hour positions to fit within technician row height
-                        const scaledTop = (idx / visibleHoursCount) * TECHNICIAN_ROW_HEIGHT;
-                        return (
-                          <div
-                            key={hour}
-                            className="absolute border-t border-border/30"
-                            style={{
-                              top: `${scaledTop}px`,
-                              width: "100%"
-                            }}
-                          />
-                        );
-                      })}
+                    {/* Hour Grid Lines */}
+                    <div className="absolute inset-0 pointer-events-none">
+                      {[...ALL_HOURS, ALL_HOURS.length].map((hour) => (
+                        <div
+                          key={`grid-${hour}`}
+                          className="absolute border-l border-border/30"
+                          style={{
+                            left: `${hour * HOUR_COLUMN_WIDTH}px`,
+                            top: 0,
+                            bottom: 0,
+                          }}
+                        />
+                      ))}
                     </div>
 
                     {/* Appointments */}
@@ -425,19 +408,8 @@ export function GanttView({
                         return null;
                       }
 
-                      // Check if appointment is in visible range
                       const startDt = parseLocalDateTime(appointment.scheduled_start_datetime);
                       const endDt = parseLocalDateTime(appointment.scheduled_finish_datetime);
-                      const appointmentStartHour = startDt.getHours();
-                      const appointmentEndHour = endDt.getHours();
-
-                      // Skip if appointment is completely outside visible range
-                      if (
-                        (appointmentEndHour < visibleStartHour) ||
-                        (appointmentStartHour > visibleEndHour)
-                      ) {
-                        return null;
-                      }
 
                       const statusColors: Record<string, string> = {
                         Open: "bg-primary/70",
@@ -462,14 +434,6 @@ export function GanttView({
                       const startMinutes = (appointmentStart.getTime() - dayStart.getTime()) / (1000 * 60);
                       const endMinutes = (appointmentEnd.getTime() - dayStart.getTime()) / (1000 * 60);
 
-                      // Adjust for visible hours offset - calculate position relative to visible start
-                      const visibleStartMinutes = visibleStartHour * 60;
-
-                      // Calculate position relative to visible start (can be negative if before visible range)
-                      const adjustedStartMinutes = startMinutes - visibleStartMinutes;
-
-                      const adjustedEndMinutes = endMinutes - visibleStartMinutes;
-
                       // Vertical position - center the appointment bar in the technician row
                       const top = (TECHNICIAN_ROW_HEIGHT - 40) / 2; // Center 40px bar in 60px row
 
@@ -480,16 +444,10 @@ export function GanttView({
 
                       // Calculate horizontal position and width using absolute pixel values
                       // Each hour is 80px wide, so we calculate based on that
-                      const hourColumnWidth = 80;
+                      const leftPx = (startMinutes / 60) * HOUR_COLUMN_WIDTH;
 
-                      // Calculate left position in pixels (relative to visible start)
-                      // If start is before visible range, left will be negative (will be clipped naturally)
-                      const leftPx = (adjustedStartMinutes / 60) * hourColumnWidth;
-
-                      // Calculate width in pixels based on actual duration
-                      // This allows the bar to extend beyond visible range
-                      const durationHours = (adjustedEndMinutes - adjustedStartMinutes) / 60;
-                      const widthPx = Math.max(durationHours * hourColumnWidth, 80); // Min 80px
+                      const durationHours = (endMinutes - startMinutes) / 60;
+                      const widthPx = Math.max(durationHours * HOUR_COLUMN_WIDTH, 40); // Min width
 
                       const left = `${leftPx}px`;
                       const width = `${widthPx}px`;
