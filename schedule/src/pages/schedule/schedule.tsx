@@ -145,7 +145,7 @@ export default function SchedulePage() {
     <div className="flex flex-col h-screen w-full bg-background overflow-hidden">
       <div className="relative flex-1 overflow-hidden" dir={direction}>
         <div className="absolute inset-y-0 right-0 w-1 bg-primary/60 pointer-events-none" />
-        <div className="flex h-full w-full bg-background overflow-hidden">
+        <div className="flex h-full w-full bg-background overflow-hidden min-w-0">
           {/* Left Sidebar Menu */}
           <SidebarMenu
             activeMenu={activeMenu}
@@ -171,17 +171,17 @@ export default function SchedulePage() {
 
           {settingsView ? (
             /* Settings View - Full Width */
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden min-w-0">
               <SettingsView onBack={() => setSettingsView(false)} />
             </div>
       ) : requestsView ? (
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           <ServiceOrdersView />
             </div>
           ) : (
             <>
               {/* Left Panel - 20% */}
-              <div className="w-[20%] border-r border-border flex flex-col">
+              <div className="flex-shrink-0 flex-grow-0 flex-basis-[20%] border-r border-border flex flex-col min-w-0 overflow-hidden">
                 {leftPanelView === "appointments" ? (
                   <ScheduleLeftPanel
                     appointments={appointments}
@@ -213,7 +213,7 @@ export default function SchedulePage() {
               </div>
 
               {/* Right Panel - 75% */}
-              <div className="flex-1 flex flex-col">
+              <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
                 <ScheduleRightPanel
                   appointments={appointments}
                   selectedDate={selectedDate}

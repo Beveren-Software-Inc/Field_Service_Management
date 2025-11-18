@@ -36,7 +36,7 @@ export function SidebarMenu({
   ];
 
   return (
-    <div className="h-full w-16 border-r border-border flex flex-col items-center py-4 gap-2 group/sidebar bg-gradient-to-b from-primary/60 via-primary/45 to-primary/30">
+    <div className="h-full w-16 flex-shrink-0 flex-grow-0 border-r border-border flex flex-col items-center py-4 gap-2 group/sidebar bg-gradient-to-b from-primary/60 via-primary/45 to-primary/30">
       {menuItems.map((item) => {
         const Icon = item.icon;
         const isHovered = hoveredItem === item.label;
