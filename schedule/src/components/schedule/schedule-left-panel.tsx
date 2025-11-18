@@ -12,7 +12,6 @@ import {
   ServiceOrderSummary,
 } from "../../pages/schedule/types";
 import { Skeleton } from "../ui/skeleton";
-import { AppointmentDetailSheet } from "./appointment-detail-sheet";
 import { ServiceOrderDetailSheet } from "./service-order-detail-sheet";
 import { MassActionsDropdown } from "./mass-actions-dropdown";
 import { Filter, CalendarIcon } from "lucide-react";
@@ -90,7 +89,6 @@ export function ScheduleLeftPanel({
   serviceOrders,
   serviceOrdersLoading,
 }: ScheduleLeftPanelProps) {
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [selectedServiceOrder, setSelectedServiceOrder] = useState<ServiceOrderDetail | null>(null);
   const [serviceOrderSheetOpen, setServiceOrderSheetOpen] = useState(false);
   const [serviceOrderDetailLoading, setServiceOrderDetailLoading] = useState(false);
@@ -138,11 +136,6 @@ export function ScheduleLeftPanel({
       return appointment.service_type;
     }
     return "No description";
-  };
-
-  const handleAppointmentClick = (appointment: Appointment) => {
-    setSelectedAppointment(appointment);
-    onAppointmentClick(appointment);
   };
 
   const formatOrderDate = (dateString?: string) => {
@@ -287,33 +280,31 @@ const getOrderStatusColor = (status?: string) => {
     <>
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between mb-3 gap-3">
-            <div>
+        <div className="p-4 border-b border-border space-y-3">
+          <div>
 
+            <div className="flex items-center justify-between mt-1">
               <h2 className="text-lg font-semibold">
                 {isOrderMode ? "Service Orders" : "Service Appointments"}
               </h2>
-            </div>
-            <div className="flex items-center gap-2">
               <Badge variant="secondary">
                 {isOrderMode ? serviceOrders.length : appointments.length}
               </Badge>
-              <Button
-                variant={isOrderMode ? "outline" : "default"}
-                size="sm"
-                className={cn(
-                  "text-xs font-semibold transition-colors",
-                  isOrderMode
-                    ? "border-primary text-primary hover:bg-primary/10"
-                    : "bg-primary text-primary-foreground"
-                )}
-                onClick={onModeToggle}
-              >
-                {isOrderMode ? "View Appointments" : "View Service Orders"}
-              </Button>
             </div>
           </div>
+          <Button
+            variant={isOrderMode ? "outline" : "default"}
+            size="sm"
+            className={cn(
+              "w-full justify-center text-sm font-medium transition-colors",
+              isOrderMode
+                ? "border-primary text-primary hover:bg-primary/5"
+                : "bg-primary text-primary-foreground"
+            )}
+            onClick={onModeToggle}
+          >
+            {isOrderMode ? "View Service Appointments" : "View Service Orders"}
+          </Button>
 
           {isOrderMode ? (
             <div className="mb-3">
@@ -532,7 +523,7 @@ const getOrderStatusColor = (status?: string) => {
                       ${isSelected ? "bg-primary/5 border-primary" : "hover:bg-muted/50"}
                       ${isCompleted ? "opacity-80" : ""}
                     `}
-                      onClick={() => handleAppointmentClick(appointment)}
+                      onClick={() => onAppointmentClick(appointment)}
                       draggable={!isCompleted}
                       onDragStart={(e) => {
                         if (isCompleted) {
@@ -617,14 +608,6 @@ const getOrderStatusColor = (status?: string) => {
       </div>
 
       {/* Detail Sheet */}
-      {selectedAppointment && (
-        <AppointmentDetailSheet
-          appointment={selectedAppointment}
-          open={!!selectedAppointment}
-          onOpenChange={(open) => !open && setSelectedAppointment(null)}
-        />
-      )}
-
       <ServiceOrderDetailSheet
         order={selectedServiceOrder}
         open={serviceOrderSheetOpen}

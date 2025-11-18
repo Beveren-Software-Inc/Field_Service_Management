@@ -77,11 +77,9 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
     return saved === "technicians" ? "technicians" : "appointments";
   })(),
   leftListMode:
-    (typeof window !== "undefined" && localStorage.getItem("schedule-left-list-mode") === "appointments")
-      ? "appointments"
-      : (typeof window !== "undefined" && localStorage.getItem("schedule-left-list-mode") === "orders")
-      ? "orders"
-      : "appointments",
+    typeof window !== "undefined" && localStorage.getItem("schedule-left-list-mode")
+      ? (localStorage.getItem("schedule-left-list-mode") as "orders" | "appointments")
+      : "orders",
   settingsView:
     (typeof window !== "undefined" && localStorage.getItem("schedule-settings-view") === "1") ||
     false,
