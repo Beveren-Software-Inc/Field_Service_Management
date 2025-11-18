@@ -76,6 +76,21 @@ export function GanttView({
     loadTechnicians();
   }, []);
 
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ service_order: string; customer?: string }>).detail;
+      if (!detail) return;
+      setCreateServiceOrder(detail.service_order);
+      if (detail.customer) {
+        setCreateCustomer(detail.customer);
+      }
+      setCreateOpen(true);
+    };
+
+    window.addEventListener("open-create-appointment", handler);
+    return () => window.removeEventListener("open-create-appointment", handler);
+  }, []);
+
   const loadTechnicians = async () => {
     try {
       const data = await fetchTechnicians();

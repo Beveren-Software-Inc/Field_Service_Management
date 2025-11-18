@@ -7,6 +7,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "../ui/sheet";
+import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
 import { format } from "date-fns";
@@ -23,18 +24,13 @@ interface ServiceOrderDetailSheetProps {
 const getStatusBadgeColor = (status?: string) => {
   if (!status) return "border-border text-muted-foreground";
   const normalized = status.toLowerCase();
-  if (normalized.includes("open") || normalized.includes("pending")) {
-    return "bg-blue-100 text-blue-800 border-blue-200";
-  }
-  if (normalized.includes("progress") || normalized.includes("dispatch")) {
-    return "bg-orange-100 text-orange-800 border-orange-200";
-  }
-  if (normalized.includes("complete") || normalized.includes("close")) {
-    return "bg-green-100 text-green-800 border-green-200";
-  }
-  if (normalized.includes("cancel")) {
-    return "bg-gray-100 text-gray-700 border-gray-200";
-  }
+  if (normalized === "open") return "bg-cyan-50 text-cyan-700 border-cyan-200";
+  if (normalized === "scheduled") return "bg-blue-50 text-blue-700 border-blue-200";
+  if (normalized === "dispatched") return "bg-purple-50 text-purple-700 border-purple-200";
+  if (normalized === "in progress") return "bg-orange-50 text-orange-700 border-orange-200";
+  if (normalized === "review") return "bg-pink-50 text-pink-700 border-pink-200";
+  if (normalized === "completed") return "bg-green-50 text-green-700 border-green-200";
+  if (normalized === "cancelled") return "bg-gray-100 text-gray-700 border-gray-200";
   return "border-border text-muted-foreground";
 };
 
@@ -61,6 +57,23 @@ export function ServiceOrderDetailSheet({
             <div className="min-w-0">
               <SheetTitle>Service Order Details</SheetTitle>
               <SheetDescription className="truncate">{order?.name}</SheetDescription>
+            {order?.status?.toLowerCase() === "open" && (
+              <Button
+                size="sm"
+                className="bg-primary text-primary-foreground"
+                onClick={() => {
+                  const event = new CustomEvent("open-create-appointment", {
+                    detail: {
+                      service_order: order.name,
+                      customer: order.customer,
+                    },
+                  });
+                  window.dispatchEvent(event);
+                }}
+              >
+                Create Appointment
+              </Button>
+            )}
             </div>
             {order?.status && (
               <Badge variant="outline" className={getStatusBadgeColor(order.status)}>
@@ -90,6 +103,18 @@ export function ServiceOrderDetailSheet({
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Service Type</span>
                       <span className="font-medium">{order.type}</span>
+                    </div>
+                  )}
+                  {order.product_location && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Product Location</span>
+                      <span className="font-medium">{order.product_location}</span>
+                    </div>
+                  )}
+                  {order.current_product_location && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Current Location</span>
+                      <span className="font-medium">{order.current_product_location}</span>
                     </div>
                   )}
                   {formatDate(order.posting_date) && (
