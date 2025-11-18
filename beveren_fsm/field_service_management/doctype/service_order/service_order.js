@@ -582,7 +582,7 @@ frappe.ui.form.on("Service Order", {
       {
         fieldname: "product_location",
         fieldtype: "Link",
-        label: __("Product Location"),
+        label: __("Product Movement Type"),
         options: "Product Location",
         reqd: 1,
         default: defaultProductLocation,

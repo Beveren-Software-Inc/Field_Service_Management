@@ -49,9 +49,7 @@
   "preferred_time",
   "column_break_extu",
   "preference_note",
-  "amended_from",
-  "section_break_mzqv",
-  "product_movement"
+  "amended_from"
  ],
  "fields": [
   {
@@ -347,20 +345,6 @@
    "label": "Current Product Location",
    "no_copy": 1,
    "options": "Product Location"
-  },
-  {
-   "fieldname": "section_break_mzqv",
-   "fieldtype": "Section Break",
-   "label": "Movement Tracker"
-  },
-  {
-   "allow_on_submit": 1,
-   "fieldname": "product_movement",
-   "fieldtype": "Table",
-   "label": "Product Movement",
-   "no_copy": 1,
-   "options": "Product Movement",
-   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
@@ -375,7 +359,7 @@
    "link_fieldname": "service_request"
   }
  ],
- "modified": "2025-11-17 04:17:34.797562",
+ "modified": "2025-11-18 02:43:22.132242",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Service Request",

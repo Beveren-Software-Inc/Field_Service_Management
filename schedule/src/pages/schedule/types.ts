@@ -46,6 +46,7 @@ export interface ServiceRequestMovement {
   linked_document_type?: string;
   linked_document?: string;
   handled_by?: string;
+  service_order?: string;
 }
 
 export interface ServiceRequest {

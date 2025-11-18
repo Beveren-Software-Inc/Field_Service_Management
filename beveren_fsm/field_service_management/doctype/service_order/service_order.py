@@ -34,6 +34,7 @@ def _set_status_from_location(order, location):
 
 class ServiceOrder(Document):
 	def validate(self):
+		self.ensure_default_product_location()
 		self.set_in_words()
 		self.validate_items()
 		self.calculate_service_totals()
@@ -103,6 +104,14 @@ class ServiceOrder(Document):
 		request.status = "Open"
 		self.service_request = ""
 		request.save()
+
+	def ensure_default_product_location(self):
+		if not self.product_location:
+			default_location = (
+				frappe.db.get_value("Product Location", {"name": "Customer Site"}, "destination")
+				or "Customer Site"
+			)
+			self.product_location = default_location
 
 	@frappe.whitelist()
 	def create_appointment(self, service_order):
@@ -993,11 +1002,6 @@ def record_product_movement(
 
 	order = frappe.get_doc("Service Order", service_order)
 
-	if not order.service_request:
-		frappe.throw(_("Service Order {0} is not linked to a Service Request").format(order.name))
-
-	service_request = frappe.get_doc("Service Request", order.service_request)
-
 	row = {
 		"movement_type": location,
 		"movement_date": movement_date or today(),
@@ -1008,18 +1012,35 @@ def record_product_movement(
 		row["linked_document_type"] = linked_document_type
 		row["linked_document"] = linked_document
 
-	entry = service_request.append("product_movement", row)
+	entry = order.append("product_movement", row)
+	row_destination = entry.destination or location
 
-	# Update current_product_location on Service Request
-	service_request.current_product_location = location
-
-	# Update current_product_location on Service Order
+	# Update Service Order fields
 	order.current_product_location = location
-
-	_set_status_from_location(order, location)
-
-	service_request.save(ignore_permissions=True)
+	order.product_location = row_destination
+	_set_status_from_location(order, row_destination)
 	order.save(ignore_permissions=True)
+
+	# Keep Service Request in sync when available
+	if order.service_request:
+		try:
+			service_request = frappe.get_doc("Service Request", order.service_request)
+			service_request.current_product_location = row_destination
+			if hasattr(service_request, "product_movement"):
+				# legacy compatibility: mirror entry if table still exists
+				service_request.append(
+					"product_movement",
+					{
+						"movement_type": row_destination,
+						"movement_date": entry.movement_date,
+						"linked_document_type": entry.linked_document_type,
+						"linked_document": entry.linked_document,
+						"handled_by": entry.handled_by,
+					},
+				)
+			service_request.save(ignore_permissions=True)
+		except frappe.DoesNotExistError:
+			pass
 
 	return entry.name
 
@@ -1042,34 +1063,68 @@ def update_product_movement_on_submit(doc, method):
 	except frappe.DoesNotExistError:
 		return
 
-	# Get Service Request
-	if not order.service_request:
-		return
-
-	try:
-		service_request = frappe.get_doc("Service Request", order.service_request)
-	except frappe.DoesNotExistError:
-		return
-
-	# Find the product movement entry that matches the location and doesn't have linked_document
 	product_location = doc.custom_current_product_location
-
-	# Find matching entry without linked_document
 	matching_entry = None
-	for entry in service_request.product_movement:
+	for entry in order.product_movement:
 		if entry.movement_type == product_location and not entry.linked_document:
 			matching_entry = entry
 			break
 
 	if matching_entry:
-		# Update the entry with linked document information
 		matching_entry.linked_document_type = doc.doctype
 		matching_entry.linked_document = doc.name
+		if not matching_entry.movement_date:
+			matching_entry.movement_date = getattr(doc, "posting_date", None) or today()
+		if not matching_entry.handled_by:
+			matching_entry.handled_by = frappe.session.user
+	else:
+		order.append(
+			"product_movement",
+			{
+				"movement_type": product_location,
+				"movement_date": getattr(doc, "posting_date", None) or today(),
+				"linked_document_type": doc.doctype,
+				"linked_document": doc.name,
+				"handled_by": frappe.session.user,
+			},
+		)
 
-		service_request.save(ignore_permissions=True)
+	order.current_product_location = product_location
+	order.product_location = (
+		(getattr(matching_entry, "destination", None) if matching_entry else None)
+		or getattr(order.product_movement[-1], "destination", None)
+		or product_location
+	)
+	_set_status_from_location(order, order.product_location or product_location)
+	order.save(ignore_permissions=True)
 
-	if _set_status_from_location(order, product_location):
-		order.save(ignore_permissions=True)
+	# Keep Service Request in sync when available
+	if order.service_request:
+		try:
+			service_request = frappe.get_doc("Service Request", order.service_request)
+		except frappe.DoesNotExistError:
+			service_request = None
+
+		if service_request:
+			service_request.current_product_location = product_location
+			if hasattr(service_request, "product_movement"):
+				sr_entry = None
+				for entry in service_request.product_movement:
+					if entry.movement_type == product_location and not entry.linked_document:
+						sr_entry = entry
+						break
+				if not sr_entry:
+					sr_entry = service_request.append(
+						"product_movement",
+						{
+							"movement_type": product_location,
+							"movement_date": getattr(doc, "posting_date", None) or today(),
+							"handled_by": frappe.session.user,
+						},
+					)
+				sr_entry.linked_document_type = doc.doctype
+				sr_entry.linked_document = doc.name
+			service_request.save(ignore_permissions=True)
 
 
 @frappe.whitelist()

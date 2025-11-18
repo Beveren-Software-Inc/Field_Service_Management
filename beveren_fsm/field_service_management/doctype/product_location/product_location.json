@@ -15,7 +15,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Product Location",
+   "label": "Movement Type",
    "reqd": 1,
    "unique": 1
   },
@@ -24,13 +24,13 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Destination"
+   "label": "Product Destination"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-12 04:07:46.697596",
+ "modified": "2025-11-18 02:28:42.446026",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Product Location",

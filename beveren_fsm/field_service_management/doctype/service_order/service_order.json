@@ -23,7 +23,7 @@
   "priority",
   "company",
   "amended_from",
-  "current_product_location",
+  "product_location",
   "accounting_dimensions_section",
   "cost_center",
   "column_break_ekul",
@@ -96,7 +96,9 @@
   "column_break_gtsg",
   "preference_note",
   "status_section",
-  "per_billed"
+  "per_billed",
+  "product_tracking_tab",
+  "product_movement"
  ],
  "fields": [
   {
@@ -801,11 +803,25 @@
    "read_only": 1
   },
   {
+   "fieldname": "product_tracking_tab",
+   "fieldtype": "Tab Break",
+   "label": "Product Tracking"
+  },
+  {
    "allow_on_submit": 1,
-   "fieldname": "current_product_location",
-   "fieldtype": "Link",
-   "label": "Current Product Location",
-   "options": "Product Location",
+   "fieldname": "product_movement",
+   "fieldtype": "Table",
+   "ignore_user_permissions": 1,
+   "label": "Product Tracker",
+   "options": "Product Movement",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fetch_from": "current_product_location.destination",
+   "fieldname": "product_location",
+   "fieldtype": "Data",
+   "label": "Product Location",
    "read_only": 1
   }
  ],
@@ -821,7 +837,7 @@
    "link_fieldname": "custom_reference_service_document"
   }
  ],
- "modified": "2025-11-17 04:08:15.600873",
+ "modified": "2025-11-18 03:10:34.985668",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Service Order",
