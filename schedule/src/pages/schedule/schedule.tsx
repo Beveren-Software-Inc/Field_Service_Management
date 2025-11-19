@@ -231,7 +231,7 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      <div className="border-t border-primary text-right text-[0.65rem] tracking-[0.2em] uppercase text-primary px-4 py-3 bg-gradient-to-t from-primary/75 via-primary/10 to-transparent">
+      <div className="border-t border-primary text-right text-[0.65rem] tracking-[0.2em] uppercase text-primary px-4 py-2 bg-gradient-to-t from-primary/75 via-primary/10 to-transparent">
         Powered By Beveren Software
       </div>
 
