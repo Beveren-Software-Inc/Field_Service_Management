@@ -1,14 +1,11 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Button } from "../ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Appointment } from "../../pages/schedule/types";
-import { fetchTechnicians, reallocateAppointment, createAppointment, fetchServiceOrders, fetchServiceTypes, fetchItems, fetchAvailableServiceOrders } from "../../hooks/use-appointments";
+import { fetchTechnicians, reallocateAppointment, createAppointment, fetchServiceTypes, fetchItems, fetchAvailableServiceOrders } from "../../hooks/use-appointments";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { toast } from "../ui/use-toast";
 import { format, startOfDay, parse } from "date-fns";
-import { cn } from "../../lib/utils";
 
 interface GanttViewProps {
   appointments: Appointment[];
@@ -47,8 +44,6 @@ export function GanttView({
   const [optionsServiceOrders, setOptionsServiceOrders] = useState<Array<{name: string; customer?: string; type?: string}>>([]);
   const [optionsServiceTypes, setOptionsServiceTypes] = useState<Array<{name: string}>>([]);
   const [optionsItems, setOptionsItems] = useState<Array<{name: string; item_name?: string; standard_rate?: number}>>([]);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
 
   useEffect(() => {
     // Load master data for create modal
@@ -174,31 +169,6 @@ export function GanttView({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const timelineContentRef = useRef<HTMLDivElement>(null);
 
-  const scrollTimeline = (direction: "left" | "right") => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    const delta = direction === "left" ? -HOUR_COLUMN_WIDTH * 3 : HOUR_COLUMN_WIDTH * 3;
-    container.scrollBy({ left: delta, behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const updateScrollState = () => {
-      const maxScrollLeft = container.scrollWidth - container.clientWidth;
-      setCanScrollLeft(container.scrollLeft > 0);
-      setCanScrollRight(container.scrollLeft < maxScrollLeft - 1);
-    };
-
-    updateScrollState();
-    container.addEventListener("scroll", updateScrollState);
-    window.addEventListener("resize", updateScrollState);
-    return () => {
-      container.removeEventListener("scroll", updateScrollState);
-      window.removeEventListener("resize", updateScrollState);
-    };
-  }, []);
 
   const toFrappeDateTime = (date: Date) => {
     const pad = (n: number) => String(n).padStart(2, "0");
@@ -309,25 +279,9 @@ export function GanttView({
             className="relative flex-shrink-0"
             style={{ width: `${TIMELINE_WIDTH}px` }}
           >
-            {/* Time Column Headers with Scroll Arrows */}
-            <div className="sticky top-0 bg-card border-b border-border z-20 flex relative items-center h-[40px]">
-              {/* Left Arrow Button */}
-              {canScrollLeft && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="absolute left-1 top-1/2 -translate-y-1/2 z-30 bg-background shadow-md hover:shadow-lg h-7 w-7"
-                  onClick={() => scrollTimeline("left")}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-              )}
-
-              {/* Time Labels */}
-              <div
-                className={cn("flex", canScrollLeft && "ml-10", canScrollRight && "mr-10")}
-                style={{ width: `${TIMELINE_WIDTH}px` }}
-              >
+            {/* Time Column Headers */}
+            <div className="sticky top-0 bg-card border-b border-border z-20 flex items-center h-[40px]">
+              <div className="flex" style={{ width: `${TIMELINE_WIDTH}px` }}>
                 {ALL_HOURS.map((hour) => (
                   <div
                     key={hour}
@@ -338,18 +292,6 @@ export function GanttView({
                   </div>
                 ))}
               </div>
-
-              {/* Right Arrow Button */}
-              {canScrollRight && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 z-30 bg-background shadow-md hover:shadow-lg h-7 w-7"
-                  onClick={() => scrollTimeline("right")}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              )}
             </div>
 
             {/* Technician Rows with Appointments */}
