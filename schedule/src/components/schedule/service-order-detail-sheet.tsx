@@ -62,6 +62,7 @@ export function ServiceOrderDetailSheet({
                 size="sm"
                 className="bg-primary text-primary-foreground"
                 onClick={() => {
+                  if (!order) return;
                   const event = new CustomEvent("open-create-appointment", {
                     detail: {
                       service_order: order.name,
@@ -69,6 +70,7 @@ export function ServiceOrderDetailSheet({
                     },
                   });
                   window.dispatchEvent(event);
+                  onOpenChange(false);
                 }}
               >
                 Create Appointment
