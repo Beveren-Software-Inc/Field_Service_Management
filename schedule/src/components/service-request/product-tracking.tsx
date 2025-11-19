@@ -109,9 +109,9 @@ export function ServiceOrdersView() {
     filteredOrders.find((req) => req.name === selectedOrderId) || filteredOrders[0] || null;
 
   return (
-    <div className="flex flex-1 h-full bg-background">
+    <div className="flex flex-1 h-full w-full overflow-hidden bg-background">
       {/* Left Pane */}
-      <div className="w-[25%] border-r border-border flex flex-col bg-card/40">
+      <div className="w-[20%] min-w-[260px] border-r border-border flex flex-col bg-card/40">
         <div className="p-4 border-b border-border space-y-3 bg-card">
           <div className="flex items-center justify-between">
             <div>
@@ -206,7 +206,7 @@ export function ServiceOrdersView() {
       </div>
 
       {/* Right Pane */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {selectedOrder ? (
           <div className="h-full flex flex-col">
             <div className="border-b border-border px-6 py-4 bg-gradient-to-b from-primary/60 via-primary/45 to-primary/20 flex items-center justify-between text-primary-foreground shadow-sm">
@@ -281,9 +281,8 @@ export function ServiceOrdersView() {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Date</TableHead>
-                            <TableHead>Destination</TableHead>
-                            <TableHead>Linked Document</TableHead>
-                            <TableHead>Service Order</TableHead>
+                          <TableHead>Destination</TableHead>
+                          <TableHead>Linked Document</TableHead>
                             <TableHead>Handled By</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -310,7 +309,6 @@ export function ServiceOrdersView() {
                                     "—"
                                   )}
                                 </TableCell>
-                                <TableCell>{movement.service_order || "—"}</TableCell>
                                 <TableCell>{movement.handled_by || "—"}</TableCell>
                               </TableRow>
                             ))}
