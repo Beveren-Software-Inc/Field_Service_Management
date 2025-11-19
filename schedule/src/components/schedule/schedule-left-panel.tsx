@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Checkbox } from "../ui/checkbox";
 import { Badge } from "../ui/badge";
 import { ScrollArea } from "../ui/scroll-area";
@@ -14,13 +14,14 @@ import {
 import { Skeleton } from "../ui/skeleton";
 import { ServiceOrderDetailSheet } from "./service-order-detail-sheet";
 import { MassActionsDropdown } from "./mass-actions-dropdown";
-import { Filter, CalendarIcon } from "lucide-react";
+import { Filter, CalendarIcon, XCircle } from "lucide-react";
 import { Button } from "../ui/button";
 import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { format } from "date-fns";
 import { cn } from "../../lib/utils";
 import { fetchServiceOrderDetail } from "../../hooks/use-appointments";
+import { Input } from "../ui/input";
 
 const STATUS_OPTIONS: AppointmentStatus[] = [
   "Open",
@@ -95,6 +96,14 @@ export function ScheduleLeftPanel({
   const [filtersPopoverOpen, setFiltersPopoverOpen] = useState(false);
   const [startDatePickerOpen, setStartDatePickerOpen] = useState(false);
   const [endDatePickerOpen, setEndDatePickerOpen] = useState(false);
+  const [appointmentSearchTerm, setAppointmentSearchTerm] = useState("");
+  const [serviceOrderSearchTerm, setServiceOrderSearchTerm] = useState("");
+  const [serviceOrderDateRange, setServiceOrderDateRange] = useState<{
+    startDate: Date | null;
+    endDate: Date | null;
+  }>({ startDate: null, endDate: null });
+  const [serviceOrderStartPickerOpen, setServiceOrderStartPickerOpen] = useState(false);
+  const [serviceOrderEndPickerOpen, setServiceOrderEndPickerOpen] = useState(false);
   const selectAllCheckboxRef = useRef<HTMLButtonElement>(null);
 
   const allSelected = appointments.length > 0 && selectedAppointments.length === appointments.length;
@@ -183,11 +192,70 @@ const getOrderStatusColor = (status?: string) => {
     )
   ).sort();
 
-  const filteredServiceOrders = serviceOrders.filter((order) => {
-    if (serviceOrderStatusFilter === "all") return true;
-    const status = (order.status || "").toLowerCase();
-    return status === serviceOrderStatusFilter.toLowerCase();
-  });
+  const filteredServiceOrders = useMemo(() => {
+    const statusFiltered = serviceOrders.filter((order) => {
+      if (serviceOrderStatusFilter === "all") return true;
+      const status = (order.status || "").toLowerCase();
+      return status === serviceOrderStatusFilter.toLowerCase();
+    });
+
+    const normalizedStart = serviceOrderDateRange.startDate
+      ? new Date(serviceOrderDateRange.startDate)
+      : null;
+    if (normalizedStart) normalizedStart.setHours(0, 0, 0, 0);
+    const normalizedEnd = serviceOrderDateRange.endDate
+      ? new Date(serviceOrderDateRange.endDate)
+      : null;
+    if (normalizedEnd) normalizedEnd.setHours(23, 59, 59, 999);
+
+    const dateFiltered = statusFiltered.filter((order) => {
+      if (!normalizedStart && !normalizedEnd) return true;
+      if (!order.posting_date) return false;
+      const postingDate = new Date(order.posting_date);
+      if (normalizedStart && postingDate < normalizedStart) return false;
+      if (normalizedEnd && postingDate > normalizedEnd) return false;
+      return true;
+    });
+
+    if (!serviceOrderSearchTerm.trim()) {
+      return dateFiltered;
+    }
+
+    const term = serviceOrderSearchTerm.toLowerCase();
+    return dateFiltered.filter((order) => {
+      const nameMatch = order.name?.toLowerCase().includes(term);
+      const customerMatch = order.customer?.toLowerCase().includes(term);
+      return nameMatch || customerMatch;
+    });
+  }, [
+    serviceOrders,
+    serviceOrderStatusFilter,
+    serviceOrderSearchTerm,
+    serviceOrderDateRange.startDate,
+    serviceOrderDateRange.endDate,
+  ]);
+
+  const filteredAppointments = useMemo(() => {
+    if (!appointmentSearchTerm.trim()) {
+      return appointments;
+    }
+    const term = appointmentSearchTerm.toLowerCase();
+    return appointments.filter((appointment) => {
+      const idMatch = appointment.name?.toLowerCase().includes(term);
+      const customerMatch = appointment.customer?.toLowerCase().includes(term);
+      return idMatch || customerMatch;
+    });
+  }, [appointments, appointmentSearchTerm]);
+
+  const isOrderMode = mode === "orders";
+
+  useEffect(() => {
+    setFiltersPopoverOpen(false);
+    setStartDatePickerOpen(false);
+    setEndDatePickerOpen(false);
+    setServiceOrderStartPickerOpen(false);
+    setServiceOrderEndPickerOpen(false);
+  }, [isOrderMode]);
 
   const handleServiceOrderClick = async (orderName: string) => {
     try {
@@ -220,7 +288,13 @@ const getOrderStatusColor = (status?: string) => {
     if (!serviceOrdersLoading && filteredServiceOrders.length === 0) {
       return (
         <div className="p-8 text-center text-muted-foreground">
-          <p>No service orders found</p>
+          <p>
+            {serviceOrderSearchTerm.trim() ||
+            serviceOrderDateRange.startDate ||
+            serviceOrderDateRange.endDate
+              ? "No service orders match your filters"
+              : "No service orders found"}
+          </p>
         </div>
       );
     }
@@ -274,8 +348,6 @@ const getOrderStatusColor = (status?: string) => {
     );
   };
 
-  const isOrderMode = mode === "orders";
-
   return (
     <>
       <div className="flex flex-col h-full">
@@ -288,7 +360,7 @@ const getOrderStatusColor = (status?: string) => {
                 {isOrderMode ? "Service Orders" : "Service Appointments"}
               </h2>
               <Badge variant="secondary">
-                {isOrderMode ? serviceOrders.length : appointments.length}
+                {isOrderMode ? filteredServiceOrders.length : filteredAppointments.length}
               </Badge>
             </div>
           </div>
@@ -298,7 +370,7 @@ const getOrderStatusColor = (status?: string) => {
             className={cn(
               "w-full justify-center text-sm font-medium transition-colors",
               isOrderMode
-                ? "border-primary text-primary hover:bg-primary/5"
+                ? "border-primary text-primary hover:bg-primary/5 hover:text-primary"
                 : "bg-primary text-primary-foreground"
             )}
             onClick={onModeToggle}
@@ -306,158 +378,281 @@ const getOrderStatusColor = (status?: string) => {
             {isOrderMode ? "View Service Appointments" : "View Service Orders"}
           </Button>
 
-          {isOrderMode ? (
-            <div className="mb-3">
-              <Select
-                value={serviceOrderStatusFilter}
-                onValueChange={onServiceOrderFilterChange}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="All Statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  {orderStatusOptions.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {status}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : (
-            <>
-              {/* Filter Section */}
-              <div className="flex items-center gap-2 mb-3">
-                {/* Filter Menu Button */}
-                <Popover open={filtersPopoverOpen} onOpenChange={setFiltersPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      title="More Filters"
-                    >
-                      <Filter className="h-4 w-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80" align="start">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
+          <div className="flex items-center gap-2 mb-3">
+            <Popover open={filtersPopoverOpen} onOpenChange={setFiltersPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  title="More Filters"
+                >
+                  <Filter className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80" align="start">
+                {isOrderMode ? (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Search Orders</h4>
+                      <Input
+                        placeholder="Search by ID or customer"
+                        value={serviceOrderSearchTerm}
+                        onChange={(event) => setServiceOrderSearchTerm(event.target.value)}
+                        autoFocus
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
                         <h4 className="font-medium text-sm">Date Range Filter</h4>
+                        {(serviceOrderDateRange.startDate || serviceOrderDateRange.endDate) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                            title="Clear date range"
+                            onClick={() =>
+                              setServiceOrderDateRange({ startDate: null, endDate: null })
+                            }
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">From Date</label>
+                        <Popover
+                          open={serviceOrderStartPickerOpen}
+                          onOpenChange={setServiceOrderStartPickerOpen}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !serviceOrderDateRange.startDate && "text-muted-foreground"
+                              )}
+                              size="sm"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {serviceOrderDateRange.startDate ? (
+                                format(serviceOrderDateRange.startDate, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={serviceOrderDateRange.startDate || undefined}
+                              onSelect={(date) => {
+                                setServiceOrderDateRange((prev) => ({
+                                  ...prev,
+                                  startDate: date || null,
+                                }));
+                                setServiceOrderStartPickerOpen(false);
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
 
-                        {/* Start Date */}
-                        <div className="space-y-1">
-                          <label className="text-xs text-muted-foreground">From Date</label>
-                          <Popover open={startDatePickerOpen} onOpenChange={setStartDatePickerOpen}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "w-full justify-start text-left font-normal",
-                                  !appointmentDateRange.startDate && "text-muted-foreground"
-                                )}
-                                size="sm"
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {appointmentDateRange.startDate ? (
-                                  format(appointmentDateRange.startDate, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={appointmentDateRange.startDate || undefined}
-                                onSelect={(date) => {
-                                  if (date) {
-                                    onDateRangeChange({
-                                      ...appointmentDateRange,
-                                      startDate: date,
-                                    });
-                                    setStartDatePickerOpen(false);
-                                  }
-                                }}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-
-                        {/* End Date */}
-                        <div className="space-y-1">
-                          <label className="text-xs text-muted-foreground">To Date</label>
-                          <Popover open={endDatePickerOpen} onOpenChange={setEndDatePickerOpen}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "w-full justify-start text-left font-normal",
-                                  !appointmentDateRange.endDate && "text-muted-foreground"
-                                )}
-                                size="sm"
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {appointmentDateRange.endDate ? (
-                                  format(appointmentDateRange.endDate, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={appointmentDateRange.endDate || undefined}
-                                onSelect={(date) => {
-                                  if (date) {
-                                    onDateRangeChange({
-                                      ...appointmentDateRange,
-                                      endDate: date,
-                                    });
-                                    setEndDatePickerOpen(false);
-                                  }
-                                }}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                        </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">To Date</label>
+                        <Popover
+                          open={serviceOrderEndPickerOpen}
+                          onOpenChange={setServiceOrderEndPickerOpen}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !serviceOrderDateRange.endDate && "text-muted-foreground"
+                              )}
+                              size="sm"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {serviceOrderDateRange.endDate ? (
+                                format(serviceOrderDateRange.endDate, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={serviceOrderDateRange.endDate || undefined}
+                              onSelect={(date) => {
+                                setServiceOrderDateRange((prev) => ({
+                                  ...prev,
+                                  endDate: date || null,
+                                }));
+                                setServiceOrderEndPickerOpen(false);
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
                       </div>
                     </div>
-                  </PopoverContent>
-                </Popover>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Search Appointments</h4>
+                      <Input
+                        placeholder="Search by ID or customer"
+                        value={appointmentSearchTerm}
+                        onChange={(event) => setAppointmentSearchTerm(event.target.value)}
+                        autoFocus
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-sm">Date Range Filter</h4>
+                        {(appointmentDateRange.startDate || appointmentDateRange.endDate) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                            title="Clear date range"
+                            onClick={() => onDateRangeChange({ startDate: null, endDate: null })}
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
 
-                {/* Status Filter - Always Visible */}
-                <div className="flex-1">
-                  <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="All Statuses" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      {STATUS_OPTIONS.map((status) => (
-                        <SelectItem key={status} value={status}>
-                          {status}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">From Date</label>
+                        <Popover open={startDatePickerOpen} onOpenChange={setStartDatePickerOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !appointmentDateRange.startDate && "text-muted-foreground"
+                              )}
+                              size="sm"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {appointmentDateRange.startDate ? (
+                                format(appointmentDateRange.startDate, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={appointmentDateRange.startDate || undefined}
+                              onSelect={(date) => {
+                                if (date) {
+                                  onDateRangeChange({
+                                    ...appointmentDateRange,
+                                    startDate: date,
+                                  });
+                                  setStartDatePickerOpen(false);
+                                }
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
 
-              {/* Mass Actions */}
-              {selectedAppointments.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-border">
-                  <MassActionsDropdown
-                    selectedAppointmentIds={selectedAppointments}
-                    onComplete={onMassActionComplete}
-                  />
-                </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">To Date</label>
+                        <Popover open={endDatePickerOpen} onOpenChange={setEndDatePickerOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !appointmentDateRange.endDate && "text-muted-foreground"
+                              )}
+                              size="sm"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {appointmentDateRange.endDate ? (
+                                format(appointmentDateRange.endDate, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={appointmentDateRange.endDate || undefined}
+                              onSelect={(date) => {
+                                if (date) {
+                                  onDateRangeChange({
+                                    ...appointmentDateRange,
+                                    endDate: date,
+                                  });
+                                  setEndDatePickerOpen(false);
+                                }
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+
+            <div className="flex-1">
+              {isOrderMode ? (
+                <Select
+                  value={serviceOrderStatusFilter}
+                  onValueChange={onServiceOrderFilterChange}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    {orderStatusOptions.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    {STATUS_OPTIONS.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
-            </>
+            </div>
+          </div>
+
+          {!isOrderMode && selectedAppointments.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-border">
+              <MassActionsDropdown
+                selectedAppointmentIds={selectedAppointments}
+                onComplete={onMassActionComplete}
+              />
+            </div>
           )}
         </div>
 
@@ -505,14 +700,18 @@ const getOrderStatusColor = (status?: string) => {
               )}
 
               {/* Appointments */}
-              {!loading && appointments.length === 0 && (
+              {!loading && filteredAppointments.length === 0 && (
                 <div className="p-8 text-center text-muted-foreground">
-                  <p>No appointments found</p>
+                  <p>
+                    {appointmentSearchTerm.trim()
+                      ? "No appointments match your search"
+                      : "No appointments found"}
+                  </p>
                 </div>
               )}
 
               {!loading &&
-                appointments.map((appointment) => {
+                filteredAppointments.map((appointment) => {
                   const isSelected = selectedAppointments.includes(appointment.name);
                   const isCompleted = appointment.status === "Completed";
                   return (
