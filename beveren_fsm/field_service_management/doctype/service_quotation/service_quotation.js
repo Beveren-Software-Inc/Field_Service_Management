@@ -137,6 +137,7 @@ frappe.ui.form.on("Service Quotation", {
     if (frm.doc.party !== "Customer") return;
     frm.set_query("service_address", function (doc) {
       return {
+        query: "frappe.contacts.doctype.address.address.address_query",
         filters: {
           link_doctype: "Customer",
           link_name: doc.party_name,
@@ -145,6 +146,7 @@ frappe.ui.form.on("Service Quotation", {
     });
     frm.set_query("customer_contact", function (doc) {
       return {
+        query: "frappe.contacts.doctype.contact.contact.contact_query",
         filters: {
           link_doctype: "Customer",
           link_name: doc.party_name,

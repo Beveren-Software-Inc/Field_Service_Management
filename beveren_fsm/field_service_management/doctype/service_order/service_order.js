@@ -150,6 +150,7 @@ frappe.ui.form.on("Service Order", {
   customer: function (frm) {
     frm.set_query("customer_address", function (doc) {
       return {
+        query: "frappe.contacts.doctype.address.address.address_query",
         filters: {
           link_doctype: "Customer",
           link_name: doc.customer,
@@ -158,6 +159,7 @@ frappe.ui.form.on("Service Order", {
     });
     frm.set_query("customer_contact", function (doc) {
       return {
+        query: "frappe.contacts.doctype.contact.contact.contact_query",
         filters: {
           link_doctype: "Customer",
           link_name: doc.customer,
