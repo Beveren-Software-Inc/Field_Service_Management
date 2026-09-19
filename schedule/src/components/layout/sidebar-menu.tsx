@@ -36,7 +36,7 @@ export function SidebarMenu({
   ];
 
   return (
-    <div className="h-full w-16 flex-shrink-0 flex-grow-0 border-r border-border flex flex-col items-center py-4 gap-2 group/sidebar bg-gradient-to-b from-primary/60 via-primary/45 to-primary/30">
+    <div className="h-full w-16 flex-shrink-0 flex-grow-0 border-r border-border flex flex-col items-center py-4 gap-2 group/sidebar bg-gradient-to-b from-primary/60 via-primary/45 to-primary/30 dark:from-primary/25 dark:via-primary/15 dark:to-primary/10">
       {menuItems.map((item) => {
         const Icon = item.icon;
         const isHovered = hoveredItem === item.label;
@@ -52,7 +52,7 @@ export function SidebarMenu({
               className={cn(
                 "w-12 h-12 rounded-lg flex items-center justify-center transition-colors",
                 activeMenu === item.key
-                  ? "bg-primary text-white shadow-md"
+                  ? "bg-primary text-primary-foreground shadow-md"
                   : "hover:bg-primary/20 text-muted-foreground hover:text-foreground hover:bg-primary/30"
               )}
               onClick={item.onClick}

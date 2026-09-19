@@ -171,7 +171,7 @@ export function ServiceOrdersView() {
               filteredOrders.map((req) => {
                 const isActive = selectedOrder?.name === req.name;
                 const badgeColor =
-                  statusColors[req.status] || "bg-gray-100 text-gray-800 border-gray-300";
+                  statusColors[req.status ?? ""] || "bg-gray-100 text-gray-800 border-gray-300";
                 return (
                   <button
                     key={req.name}
@@ -209,7 +209,7 @@ export function ServiceOrdersView() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {selectedOrder ? (
           <div className="h-full flex flex-col">
-            <div className="border-b border-border px-6 py-4 bg-gradient-to-b from-primary/60 via-primary/45 to-primary/20 flex items-center justify-between text-primary-foreground shadow-sm">
+            <div className="border-b border-border px-6 py-4 bg-gradient-to-b from-primary/60 via-primary/45 to-primary/20 dark:from-primary/25 dark:via-primary/15 dark:to-primary/5 flex items-center justify-between text-primary-foreground shadow-sm">
               <div>
 
                 <h2 className="text-2xl font-semibold drop-shadow-sm">
@@ -219,7 +219,7 @@ export function ServiceOrdersView() {
               </div>
               <Badge
                 variant="outline"
-                className={`${statusColors[selectedOrder.status || ""] ?? "bg-white text-primary border-white"} shadow-md`}
+                className={`${statusColors[selectedOrder.status || ""] ?? "bg-muted text-foreground border-border"} shadow-md`}
               >
                 {selectedOrder.status || "Unknown"}
               </Badge>

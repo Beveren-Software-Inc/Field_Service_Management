@@ -153,7 +153,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
 
   return (
     <div className="flex flex-col gap-6 w-full h-full overflow-y-auto">
-      <div className="w-full bg-gradient-to-b from-primary/80 via-primary/60 to-primary/20 text-primary-foreground shadow-md border-b border-primary/20">
+      <div className="w-full bg-gradient-to-b from-primary/80 via-primary/60 to-primary/20 dark:from-primary/30 dark:via-primary/15 dark:to-primary/5 text-primary-foreground shadow-md border-b border-primary/20">
         <div className="max-w-6xl mx-auto px-6 py-4 min-h-[70px] flex items-center justify-between">
           <div className="flex-1">
             {onBack && (

@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { Appointment } from "../../pages/schedule/types";
 import { fetchTechnicians, reallocateAppointment, createAppointment, fetchServiceTypes, fetchItems, fetchAvailableServiceOrders } from "../../hooks/use-appointments";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
-import { toast } from "../ui/use-toast";
+import { toast } from "../../hooks/use-toast";
 import { format, startOfDay, parse } from "date-fns";
 
 interface GanttViewProps {

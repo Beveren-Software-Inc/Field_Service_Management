@@ -32,7 +32,6 @@ const getStatusColor = (status: string): string => {
 
 export function GridView({
   appointments,
-  selectedDate,
   onAppointmentClick,
   searchQuery = "",
 }: GridViewProps) {

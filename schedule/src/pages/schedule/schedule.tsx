@@ -7,7 +7,7 @@ import { SettingsView } from "../../components/schedule/settings-view";
 import { SidebarMenu } from "../../components/layout/sidebar-menu";
 import { useScheduleStore } from "../../store";
 import { fetchAppointmentsWithFilter, fetchServiceOrders } from "../../hooks/use-appointments";
-import { Toaster } from "../../components/ui/sonner";
+import { Toaster } from "../../components/ui/toaster";
 import { useCallback, useEffect, useState } from "react";
 import { ServiceOrdersView } from "../../components/service-request/product-tracking";
 
@@ -231,7 +231,7 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      <div className="border-t border-primary text-right text-[0.65rem] tracking-[0.2em] uppercase text-primary px-4 py-2 bg-gradient-to-t from-primary/75 via-primary/10 to-transparent">
+      <div className="border-t border-primary text-right text-[0.65rem] tracking-[0.2em] uppercase text-primary px-4 py-2 bg-gradient-to-t from-primary/75 via-primary/10 to-transparent dark:from-primary/25 dark:via-primary/5">
         Powered By Beveren Software
       </div>
 

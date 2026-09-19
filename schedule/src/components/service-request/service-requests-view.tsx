@@ -171,7 +171,7 @@ export function ServiceOrdersView() {
               filteredOrders.map((req) => {
                 const isActive = selectedOrder?.name === req.name;
                 const badgeColor =
-                  statusColors[req.status] || "bg-gray-100 text-gray-800 border-gray-300";
+                  statusColors[req.status ?? ""] || "bg-gray-100 text-gray-800 border-gray-300";
                 return (
                   <button
                     key={req.name}

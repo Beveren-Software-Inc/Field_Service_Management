@@ -20,7 +20,7 @@ import {
 } from "../ui/dialog";
 import { Checkbox } from "../ui/checkbox";
 import { ScrollArea } from "../ui/scroll-area";
-import { useToast } from "../ui/use-toast";
+import { useToast } from "../../hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
 interface MassActionsDropdownProps {

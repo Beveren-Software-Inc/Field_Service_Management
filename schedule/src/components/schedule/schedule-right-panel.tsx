@@ -113,7 +113,7 @@ export function ScheduleRightPanel({
   return (
     <div className="flex flex-col h-full pr-3 sm:pr-4 lg:pr-6">
       {/* Section 1: View Type Switcher (Top) */}
-      <div className="border-b border-border pl-4 pt-4 pb-4 pr-0 -mr-3 sm:-mr-4 lg:-mr-6 bg-gradient-to-b from-primary/60 via-primary/45 to-primary/30">
+      <div className="border-b border-border pl-4 pt-4 pb-4 pr-0 -mr-3 sm:-mr-4 lg:-mr-6 bg-gradient-to-b from-primary/60 via-primary/45 to-primary/30 dark:from-primary/25 dark:via-primary/15 dark:to-primary/10">
         <div className="flex flex-wrap items-start gap-3">
           <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[240px]">
             <Button

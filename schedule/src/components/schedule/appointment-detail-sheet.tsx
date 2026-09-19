@@ -18,7 +18,7 @@ import { Input } from "../ui/input";
 import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
 import { fetchTechnicians, reallocateAppointment, fetchPaidInvoicesForAppointment, InvoiceSummary } from "../../hooks/use-appointments";
-import { useToast } from "../ui/use-toast";
+import { useToast } from "../../hooks/use-toast";
 
 interface AppointmentDetailSheetProps {
   appointment: Appointment;
