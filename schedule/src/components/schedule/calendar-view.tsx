@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday } from "date-fns";
 import { Appointment } from "../../pages/schedule/types";
 import { cn } from "../../lib/utils";
 import { Badge } from "../ui/badge";
@@ -43,7 +43,6 @@ export function CalendarView({
   onDateChange,
   onAppointmentClick,
   currentMonth,
-  onMonthChange,
 }: CalendarViewProps & {
   currentMonth: Date;
   onMonthChange: (month: Date) => void;
@@ -78,14 +77,6 @@ export function CalendarView({
   // Get first day of month to pad calendar
   const firstDayOfWeek = monthStart.getDay();
   const paddingDays = Array.from({ length: firstDayOfWeek }, (_, i) => i);
-
-  const handlePreviousMonth = () => {
-    onMonthChange(subMonths(currentMonth, 1));
-  };
-
-  const handleNextMonth = () => {
-    onMonthChange(addMonths(currentMonth, 1));
-  };
 
   const handleDateClick = (date: Date) => {
     onDateChange(date);
@@ -131,11 +122,6 @@ export function CalendarView({
                 dayAppointments.forEach((apt) => {
                   statusCounts[apt.status] = (statusCounts[apt.status] || 0) + 1;
                 });
-
-                // Get primary status (most appointments or priority status)
-                const primaryStatus = dayAppointments.length > 0
-                  ? dayAppointments[0].status
-                  : null;
 
                 return (
                   <button

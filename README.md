@@ -53,7 +53,7 @@ Once the job is completed, the Service Order is closed and invoices can be gener
 
 #### Workflow Summary
 ```
-Service Request → Service Quotation (Optional) → Service Order → 
+Service Request → Service Quotation (Optional) → Service Order →
 Service Appointments → Work Execution → Invoice
 ```
 

@@ -228,7 +228,9 @@ export async function fetchServiceOrderDetail(name: string): Promise<ServiceOrde
   return json.data || json.data?.data || json;
 }
 
-export async function fetchAvailableServiceOrders(): Promise<any[]> {
+export async function fetchAvailableServiceOrders(): Promise<
+  Array<{ name: string; customer?: string; type?: string }>
+> {
   //eslint-disable-next-line @typescript-eslint/no-explicit-any
   const csrfToken = (window as any).csrf_token;
   const resp = await fetch(

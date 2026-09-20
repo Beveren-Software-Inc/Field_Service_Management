@@ -5,6 +5,21 @@
     <link rel="icon" type="image/svg+xml" href="/favicon-32x32.webp" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Beveren - Scheduling</title>
+    <script>
+      // Apply the saved colour scheme before paint to avoid a light-theme flash.
+      (function () {
+        try {
+          var saved = window.localStorage.getItem("theme");
+          var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (saved === "dark" || (!saved && prefersDark)) {
+            document.documentElement.classList.add("dark");
+          }
+        } catch (e) {
+          /* ignore */
+        }
+      })();
+    </script>
+    <meta name="color-scheme" content="light dark" />
   </head>
   <body>
     <div id="root"></div>
