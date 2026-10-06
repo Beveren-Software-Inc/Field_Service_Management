@@ -8,18 +8,23 @@ app_license = "mit"
 # Apps
 # ------------------
 
-# required_apps = []
+# This app adds custom fields and doc_events to Sales Invoice, Purchase
+# Order, Purchase Receipt, Purchase Invoice, Delivery Note, and Stock Entry,
+# all of which are ERPNext doctypes that don't exist on a bare Frappe site.
+required_apps = ["erpnext"]
 
-# Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "beveren_fsm",
-# 		"logo": "/assets/beveren_fsm/logo.png",
-# 		"title": "Field Service Management",
-# 		"route": "/beveren_fsm",
-# 		"has_permission": "beveren_fsm.api.permission.has_app_permission"
-# 	}
-# ]
+# Each item in the list will be shown as an app in the apps page.
+# Note: there is no beveren_fsm.api.permission module/has_app_permission
+# function in this app, so has_permission is omitted rather than pointing
+# at something that doesn't exist.
+add_to_apps_screen = [
+	{
+		"name": "beveren_fsm",
+		"logo": "/assets/beveren_fsm/schedule/favicon-32x32.webp",
+		"title": "Field Service Management",
+		"route": "/desk/service",
+	}
+]
 
 fixtures = [
 	# Export your custom "Service Type" doctype
