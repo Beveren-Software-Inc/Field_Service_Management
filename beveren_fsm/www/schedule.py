@@ -41,7 +41,12 @@ def get_context(context):
 	boot_json = json.dumps(boot_json)
 
 	context.update(
-		{"build_version": frappe.utils.get_build_version(), "boot": boot_json, "csrf_token": csrf_token}
+		{
+			"build_version": frappe.utils.get_build_version(),
+			"boot": boot_json,
+			"csrf_token": csrf_token,
+			"time_zone_json": json.dumps(frappe.utils.get_system_timezone()),
+		}
 	)
 
 	app_name = frappe.get_website_settings("app_name") or frappe.get_system_settings("app_name")

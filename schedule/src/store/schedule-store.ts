@@ -2,13 +2,10 @@ import { create } from "zustand";
 import { Appointment, ServiceOrderSummary } from "../pages/schedule/types";
 
 // Helper function to get initial viewType from localStorage
-const getInitialViewType = (): "gantt" | "grid" | "maps" | "calendar" => {
-  if (typeof window === "undefined") return "gantt";
+const getInitialViewType = (): "board" | "maps" => {
+  if (typeof window === "undefined") return "board";
   const saved = localStorage.getItem("schedule-view-type");
-  if (saved && ["gantt", "grid", "maps", "calendar"].includes(saved)) {
-    return saved as "gantt" | "grid" | "maps" | "calendar";
-  }
-  return "gantt";
+  return saved === "maps" ? "maps" : "board";
 };
 
 interface ScheduleState {
@@ -25,7 +22,7 @@ interface ScheduleState {
   appointmentDateRange: { startDate: Date | null; endDate: Date | null }; // For left panel appointments list
   statusFilter: string;
   serviceOrderStatusFilter: string;
-  viewType: "gantt" | "grid" | "maps" | "calendar";
+  viewType: "board" | "maps";
   leftPanelView: "appointments" | "technicians"; // Track left panel view mode
   leftListMode: "orders" | "appointments"; // Track list content within schedule view
   settingsView: boolean; // Track if settings view is open
@@ -45,7 +42,7 @@ interface ScheduleState {
   setAppointmentDateRange: (range: { startDate: Date | null; endDate: Date | null }) => void;
   setStatusFilter: (filter: string) => void;
   setServiceOrderStatusFilter: (filter: string) => void;
-  setViewType: (view: "gantt" | "grid" | "maps" | "calendar") => void;
+  setViewType: (view: "board" | "maps") => void;
   setLeftPanelView: (view: "appointments" | "technicians") => void;
   setLeftListMode: (mode: "orders" | "appointments") => void;
   setSettingsView: (open: boolean) => void;

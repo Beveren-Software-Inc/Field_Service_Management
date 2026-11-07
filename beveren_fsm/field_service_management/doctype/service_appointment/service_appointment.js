@@ -55,7 +55,7 @@ frappe.ui.form.on("Service Appointment", {
           .addClass("btn-info")
           .addClass("text-white");
       }
-      if (frm.doc.status == "In Progress") {
+      if (frm.doc.status == "On site") {
         frm
           .add_custom_button(__("Complete"), function () {
             frm.trigger("complete_work");
@@ -434,7 +434,7 @@ frappe.ui.form.on("Service Appointment", {
   start_work(frm) {
     frm.events.prompt_movement(frm, {
       title: __("Start Work"),
-      success_status: "In Progress",
+      success_status: "On site",
       success_callback: () => {
         frm.set_value("actual_start_datetime", frappe.datetime.now_datetime());
       },

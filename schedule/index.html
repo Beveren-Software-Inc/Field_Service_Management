@@ -25,6 +25,9 @@
     <div id="root"></div>
 		<script>window.csrf_token = '{{ csrf_token }}';
       if (!window.frappe) window.frappe = {};
+      window.frappe.boot = window.frappe.boot || {};
+      window.frappe.boot.sysdefaults = window.frappe.boot.sysdefaults || {};
+      window.frappe.boot.sysdefaults.time_zone = {{ time_zone_json or '"UTC"' }};
 
       window.app_name = "{{ app_name }}";
 

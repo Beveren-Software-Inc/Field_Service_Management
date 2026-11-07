@@ -245,7 +245,16 @@ def get_appointment_statuses():
 		statuses = [s.strip() for s in options.replace("\n", ",").split(",") if s.strip()]
 		return statuses
 
-	return ["Open", "Scheduled", "Dispatched", "In Progress", "Completed", "Cancelled"]
+	return [
+		"Unassigned",
+		"Scheduled",
+		"Dispatched",
+		"En route",
+		"On site",
+		"Paused",
+		"Completed",
+		"Cancelled",
+	]
 
 
 @frappe.whitelist()

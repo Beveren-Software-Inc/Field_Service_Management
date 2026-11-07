@@ -9,7 +9,6 @@ import {
 } from "../ui/sheet";
 import { Badge } from "../ui/badge";
 import { Appointment } from "../../pages/schedule/types";
-import { format } from "date-fns";
 import { Separator } from "../ui/separator";
 import { Button } from "../ui/button";
 import { useEffect, useMemo, useState } from "react";
@@ -17,20 +16,26 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "../ui/input";
 import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
-import { fetchTechnicians, reallocateAppointment, fetchPaidInvoicesForAppointment, InvoiceSummary } from "../../hooks/use-appointments";
+import { fetchTechnicians, reallocateAppointment, fetchPaidInvoicesForAppointment, updateAppointmentStatus, InvoiceSummary } from "../../hooks/use-appointments";
 import { useToast } from "../../hooks/use-toast";
+import { formatWall } from "../../lib/company-time";
 
 interface AppointmentDetailSheetProps {
   appointment: Appointment;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onUpdated?: () => void;
 }
 
 const getStatusColor = (status: string): string => {
   const colors: Record<string, string> = {
     Open: "bg-blue-100 text-blue-800 border-blue-300",
     Scheduled: "bg-blue-100 text-blue-800 border-blue-300",
-    Dispatched: "bg-orange-100 text-orange-800 border-orange-300",
+    Unassigned: "bg-slate-100 text-slate-800 border-slate-300",
+    Dispatched: "bg-violet-100 text-violet-800 border-violet-300",
+    "En route": "bg-amber-100 text-amber-800 border-amber-300",
+    "On site": "bg-orange-100 text-orange-800 border-orange-300",
+    Paused: "bg-zinc-100 text-zinc-800 border-zinc-300",
     "In Progress": "bg-orange-100 text-orange-800 border-orange-300",
     Completed: "bg-green-100 text-green-800 border-green-300",
     Cancelled: "bg-gray-100 text-gray-800 border-gray-300",
@@ -39,25 +44,27 @@ const getStatusColor = (status: string): string => {
 };
 
 // Helper to convert ISO datetime to datetime-local format (YYYY-MM-DDTHH:mm)
-const isoToDateTimeLocal = (isoString: string): string => {
-  if (!isoString) return "";
-  try {
-    const date = new Date(isoString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  } catch {
-    return isoString.slice(0, 16);
-  }
+const isoToDateTimeLocal = (value: string): string => {
+  if (!value) return "";
+  return value.trim().replace(" ", "T").slice(0, 16);
+};
+
+const formatDateOnly = (value: string): string => {
+  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
+  if (!year || !month || !day) return value;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
 };
 
 export function AppointmentDetailSheet({
   appointment,
   open,
   onOpenChange,
+  onUpdated,
 }: AppointmentDetailSheetProps) {
   const { toast } = useToast();
   const [reallocateOpen, setReallocateOpen] = useState(false);
@@ -137,8 +144,8 @@ export function AppointmentDetailSheet({
       });
       toast({ title: "Appointment re-allocated", description: "Technicians and schedule updated." });
       setReallocateOpen(false);
-      // simplest: hard refresh to reflect changes across views
-      window.location.reload();
+      if (onUpdated) onUpdated();
+      else window.location.reload();
     } catch (e) {
       const errorMessage = (e as Error).message;
       const isOverlapError = errorMessage.includes("overlap");
@@ -152,13 +159,35 @@ export function AppointmentDetailSheet({
       setLoading(false);
     }
   };
+  const [statusLoading, setStatusLoading] = useState(false);
   const formatDateTime = (dateString: string) => {
     try {
-      return format(new Date(dateString), "PPP p");
+      return formatWall(dateString);
     } catch {
       return dateString;
     }
   };
+  const changeStatus = async (status: "Dispatched" | "Cancelled") => {
+    try {
+      setStatusLoading(true);
+      await updateAppointmentStatus(appointment.name, status);
+      toast({
+        title: status === "Dispatched" ? "Visit dispatched" : "Visit cancelled",
+      });
+      if (onUpdated) onUpdated();
+      else window.location.reload();
+    } catch (error) {
+      toast({
+        title: status === "Dispatched" ? "Could not dispatch" : "Could not cancel",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+  const canDispatch = appointment.status === "Scheduled";
+  const canCancel = appointment.status !== "Completed" && appointment.status !== "Cancelled";
 
   return (
     <>
@@ -231,11 +260,31 @@ export function AppointmentDetailSheet({
                   </span>
                 </div>
               )}
+              {appointment.arrival_window_start && appointment.arrival_window_end && (
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">Arrival Window:</span>
+                  <span className="font-medium text-right">
+                    {formatDateTime(appointment.arrival_window_start)} – {formatDateTime(appointment.arrival_window_end)}
+                  </span>
+                </div>
+              )}
+              {appointment.service_area && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Service Area:</span>
+                  <span className="font-medium">{appointment.service_area}</span>
+                </div>
+              )}
+              {appointment.address_display && (
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">Address:</span>
+                  <span className="font-medium text-right">{appointment.address_display}</span>
+                </div>
+              )}
               {appointment.posting_date && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Posting Date:</span>
                   <span className="font-medium">
-                    {format(new Date(appointment.posting_date), "PPP")}
+                    {formatDateOnly(appointment.posting_date)}
                   </span>
                 </div>
               )}
@@ -293,9 +342,26 @@ export function AppointmentDetailSheet({
         )}
         </div>
 
-        {appointment.status !== "Completed" && (
-          <div className="mt-6">
-            <Button className="w-full" onClick={() => setReallocateOpen(true)}>
+        {appointment.status !== "Completed" && appointment.status !== "Cancelled" && (
+          <div className="mt-6 space-y-2">
+            <div className="flex gap-2">
+              {canDispatch && (
+                <Button className="flex-1" onClick={() => changeStatus("Dispatched")} disabled={statusLoading}>
+                  Dispatch
+                </Button>
+              )}
+              {canCancel && (
+                <Button
+                  className="flex-1"
+                  variant="outline"
+                  onClick={() => changeStatus("Cancelled")}
+                  disabled={statusLoading}
+                >
+                  Cancel visit
+                </Button>
+              )}
+            </div>
+            <Button className="w-full" variant="secondary" onClick={() => setReallocateOpen(true)}>
               Re-allocate
             </Button>
           </div>
