@@ -1,6 +1,10 @@
 {
  "charts": [
   {
+   "chart_name": "Service Requests by Status",
+   "label": "Service Requests by Status"
+  },
+  {
    "chart_name": "Service Order by Status",
    "label": "Service Order by Status"
   },
@@ -9,14 +13,14 @@
    "label": "Service Appointment By Status"
   }
  ],
- "content": "[{\"id\":\"OM5Asnk3Yb\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Open Requests\",\"col\":4}},{\"id\":\"15UfPq6SKv\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Open Orders\",\"col\":4}},{\"id\":\"w7mtVc_wCw\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Scheduled Appointments\",\"col\":4}},{\"id\":\"bjmOVGdrIM\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Service Appointment By Status\",\"col\":6}},{\"id\":\"oaawrUz3_E\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Service Order by Status\",\"col\":6}},{\"id\":\"MvJuMndtJP\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"Jwk7FRQ6i2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Your Shortcuts</span>\",\"col\":12}},{\"id\":\"LW8kVLZMYa\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Schedule\",\"col\":3}},{\"id\":\"_U1ndekMHI\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Service Technician\",\"col\":3}},{\"id\":\"4WNmCS56qX\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Service Request\",\"col\":3}},{\"id\":\"pyEAdYxjm9\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Service Quotation\",\"col\":3}},{\"id\":\"m4X3-WrFBc\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Service Order\",\"col\":3}},{\"id\":\"dFa0pdrg3n\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Service Appointment\",\"col\":3}},{\"id\":\"jdLCPep_4b\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Dashboard\",\"col\":3}},{\"id\":\"Oaw3zAt1zm\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Calendar and Grid\",\"col\":3}},{\"id\":\"XUted4g7r-\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"PIjeAP5Lu1\",\"type\":\"card\",\"data\":{\"card_name\":\"Other Masters\",\"col\":4}}]",
+ "content": "[{\"id\": \"fsmcard01\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Open Requests\", \"col\": 3}}, {\"id\": \"fsmcard02\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Open Orders\", \"col\": 3}}, {\"id\": \"fsmcard03\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Scheduled Appointments\", \"col\": 3}}, {\"id\": \"fsmcard04\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Unbilled Appointments\", \"col\": 3}}, {\"id\": \"fsmchart1\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Service Requests by Status\", \"col\": 4}}, {\"id\": \"fsmchart2\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Service Order by Status\", \"col\": 4}}, {\"id\": \"fsmchart3\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Service Appointment By Status\", \"col\": 4}}, {\"id\": \"fsmhead01\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\">Your Shortcuts</span>\", \"col\": 12}}, {\"id\": \"fsmsc01\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Dispatch Board\", \"col\": 3}}, {\"id\": \"fsmsc02\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Service Request\", \"col\": 3}}, {\"id\": \"fsmsc03\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Service Quotation\", \"col\": 3}}, {\"id\": \"fsmsc04\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Service Order\", \"col\": 3}}, {\"id\": \"fsmsc05\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Service Appointment\", \"col\": 3}}, {\"id\": \"fsmsc06\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Service Technician\", \"col\": 3}}, {\"id\": \"fsmsc07\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Service Team\", \"col\": 3}}, {\"id\": \"fsmsc08\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Repair Order\", \"col\": 3}}, {\"id\": \"fsmlinkA\", \"type\": \"card\", \"data\": {\"card_name\": \"Service Flow\", \"col\": 4}}, {\"id\": \"fsmlinkB\", \"type\": \"card\", \"data\": {\"card_name\": \"People\", \"col\": 4}}, {\"id\": \"fsmlinkC\", \"type\": \"card\", \"data\": {\"card_name\": \"Repairs and Contracts\", \"col\": 4}}, {\"id\": \"fsmlinkD\", \"type\": \"card\", \"data\": {\"card_name\": \"Setup\", \"col\": 4}}]",
  "creation": "2025-03-04 12:44:19.754540",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
  "for_user": "",
  "hide_custom": 0,
- "icon": "workflow",
+ "icon": "wrench",
  "idx": 0,
  "indicator_color": "",
  "is_hidden": 0,
@@ -25,11 +29,158 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Other Masters",
-   "link_count": 3,
+   "label": "Service Flow",
+   "link_count": 4,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Service Request",
+   "link_count": 0,
+   "link_to": "Service Request",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Service Quotation",
+   "link_count": 0,
+   "link_to": "Service Quotation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Service Order",
+   "link_count": 0,
+   "link_to": "Service Order",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Service Appointment",
+   "link_count": 0,
+   "link_to": "Service Appointment",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "People",
+   "link_count": 2,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Service Technician",
+   "link_count": 0,
+   "link_to": "Service Technician",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Service Team",
+   "link_count": 0,
+   "link_to": "Service Team",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Repairs and Contracts",
+   "link_count": 5,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Service Report",
+   "link_count": 0,
+   "link_to": "Service Report",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Repair Order",
+   "link_count": 0,
+   "link_to": "Repair Order",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Repair Shipment",
+   "link_count": 0,
+   "link_to": "Repair Shipment",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Product Movement",
+   "link_count": 0,
+   "link_to": "Product Movement",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AMC Contract",
+   "link_count": 0,
+   "link_to": "AMC Contract",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Setup",
+   "link_count": 6,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Service Type",
+   "link_count": 0,
+   "link_to": "Service Type",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   },
   {
    "hidden": 0,
@@ -54,7 +205,27 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Field Service Management Settings",
+   "label": "Technician Skill",
+   "link_count": 0,
+   "link_to": "Service Technician Skill",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Product Location",
+   "link_count": 0,
+   "link_to": "Product Location",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Settings",
    "link_count": 0,
    "link_to": "Field Service Management Settings",
    "link_type": "DocType",
@@ -62,7 +233,7 @@
    "type": "Link"
   }
  ],
- "modified": "2025-11-06 07:11:50.675544",
+ "modified": "2026-11-07 22:15:00.000000",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Service",
@@ -78,6 +249,10 @@
   {
    "label": "Scheduled Appointments",
    "number_card_name": "Scheduled Service Appointments"
+  },
+  {
+   "label": "Unbilled Appointments",
+   "number_card_name": "Non Billed Appointments"
   }
  ],
  "owner": "Administrator",
@@ -85,44 +260,14 @@
  "public": 1,
  "quick_lists": [],
  "roles": [],
- "sequence_id": 14.0,
+ "sequence_id": 1.0,
  "shortcuts": [
   {
-   "color": "Grey",
+   "color": "Blue",
    "doc_view": "List",
-   "label": "Calendar and Grid",
+   "label": "Dispatch Board",
    "type": "URL",
    "url": "/schedule"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Schedule",
-   "type": "URL",
-   "url": "/schedule"
-  },
-  {
-   "color": "Green",
-   "doc_view": "List",
-   "label": "Service Quotation",
-   "link_to": "Service Quotation",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Dashboard",
-   "link_to": "Service",
-   "type": "Dashboard"
-  },
-  {
-   "color": "Green",
-   "doc_view": "List",
-   "label": "Service Technician",
-   "link_to": "Service Technician",
-   "stats_filter": "[]",
-   "type": "DocType"
   },
   {
    "color": "Green",
@@ -135,16 +280,48 @@
   {
    "color": "Green",
    "doc_view": "List",
-   "label": "Service Order",
-   "link_to": "Service Order",
+   "label": "Service Quotation",
+   "link_to": "Service Quotation",
    "stats_filter": "[]",
    "type": "DocType"
   },
   {
    "color": "Green",
    "doc_view": "List",
+   "label": "Service Order",
+   "link_to": "Service Order",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
    "label": "Service Appointment",
    "link_to": "Service Appointment",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Service Technician",
+   "link_to": "Service Technician",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Service Team",
+   "link_to": "Service Team",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Yellow",
+   "doc_view": "List",
+   "label": "Repair Order",
+   "link_to": "Repair Order",
    "stats_filter": "[]",
    "type": "DocType"
   }

@@ -5,11 +5,27 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
+from frappe.utils import flt
 
 
 class ServiceQuotation(Document):
 	def validate(self):
 		self.validate_items()
+		self.calculate_totals()
+
+	def calculate_totals(self):
+		total = 0.0
+		for item in self.items or []:
+			amount = flt(item.amount) or flt(item.qty) * flt(item.rate)
+			item.amount = amount
+			total += amount
+		conversion = flt(self.conversion_rate) or 1
+		self.total = total
+		self.net_total = total
+		self.grand_total = total
+		self.base_total = total * conversion
+		self.base_net_total = self.base_total
+		self.base_grand_total = self.base_total
 
 	def before_submit(self):
 		if self.service_request:
@@ -38,6 +54,9 @@ def make_service_quotation(source_name, target_doc=None, selected_items=None):
 	mapping = {
 		"Service Request": {
 			"doctype": "Service Quotation",
+			# Keep the quotation's own series and Open status. Same-named fields
+			# would otherwise copy SR-.YYYY.- and a Due Soon/Overdue status.
+			"field_no_map": ["naming_series", "status", "amended_from"],
 			"field_map": {
 				"name": "service_request",
 				"customer": "party_name",
@@ -55,5 +74,11 @@ def make_service_quotation(source_name, target_doc=None, selected_items=None):
 			},
 		}
 	}
-	doc = get_mapped_doc("Service Request", source_name, mapping, target_doc)
-	return doc
+	def postprocess(source, target):
+		from beveren_fsm.field_service_management.selling import prepare_mapped_selling_doc
+
+		prepare_mapped_selling_doc(target, source, "party_name", "service_address")
+
+	return get_mapped_doc(
+		"Service Request", source_name, mapping, target_doc, postprocess=postprocess
+	)

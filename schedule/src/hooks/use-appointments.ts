@@ -1,4 +1,4 @@
-import { Appointment, ServiceOrderDetail } from "../pages/schedule/types";
+import { Appointment, BoardPayload, BoardVisit, ServiceOrderDetail } from "../pages/schedule/types";
 
 export async function fetchAppointmentsWithFilter(
   startDate: Date | null,
@@ -574,4 +574,174 @@ export async function reallocateAppointment(params: {
     console.error("Error reallocating appointment:", error);
     throw error;
   }
+}
+
+function stripHtml(value: string): string {
+  return value.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+}
+
+export function readFrappeError(raw: string): string {
+  try {
+    const data = JSON.parse(raw);
+    const server = data._server_messages;
+    if (server) {
+      const list = typeof server === "string" ? JSON.parse(server) : server;
+      if (Array.isArray(list) && list[0]) {
+        const first = typeof list[0] === "string" ? JSON.parse(list[0]) : list[0];
+        if (first?.message) return stripHtml(String(first.message));
+      }
+    }
+    if (typeof data.exception === "string" && data.exception) {
+      const message = data.exception.split(":").slice(1).join(":").trim();
+      return stripHtml(message || data.exception);
+    }
+  } catch {
+    // The body was not JSON.
+  }
+  const text = stripHtml(raw);
+  return text.slice(0, 500) || "Could not save the visit";
+}
+
+export function boardVisitToAppointment(visit: BoardVisit): Appointment {
+  return {
+    ...visit,
+    customer: visit.customer_name || visit.customer,
+    posting_date: visit.posting_date || "",
+    status: visit.status,
+    scheduled_start_datetime: visit.scheduled_start_datetime,
+    scheduled_finish_datetime: visit.scheduled_finish_datetime,
+    service_technicians: visit.service_technicians || [],
+    location: visit.location || undefined,
+  };
+}
+
+export async function fetchBoard(params: {
+  start: string;
+  end: string;
+  service_area?: string;
+  skill?: string;
+  team?: string;
+  status?: string;
+  service_type?: string;
+}): Promise<BoardPayload> {
+  const csrfToken = (window as unknown as { csrf_token?: string }).csrf_token;
+  const query = new URLSearchParams();
+  query.set("start", params.start);
+  query.set("end", params.end);
+  if (params.service_area) query.set("service_area", params.service_area);
+  if (params.skill) query.set("skill", params.skill);
+  if (params.team) query.set("team", params.team);
+  if (params.status) query.set("status", params.status);
+  if (params.service_type) query.set("service_type", params.service_type);
+
+  const response = await fetch(
+    `/api/method/beveren_fsm.field_service_management.api.schedule.get_board?${query.toString()}`,
+    {
+      headers: {
+        Accept: "application/json",
+        "X-Frappe-CSRF-Token": csrfToken || "",
+      },
+      credentials: "include",
+    }
+  );
+  if (!response.ok) {
+    throw new Error(readFrappeError(await response.text()));
+  }
+  const json = await response.json();
+  const message = json.message || {};
+  return {
+    time_zone: message.time_zone,
+    visits: message.visits || [],
+    unassigned: message.unassigned || [],
+    technicians: message.technicians || [],
+  };
+}
+
+export async function assignVisit(params: {
+  name: string;
+  scheduled_start_datetime: string;
+  scheduled_finish_datetime: string;
+  service_technician?: string | null;
+  service_team?: string | null;
+}): Promise<string> {
+  const csrfToken = (window as unknown as { csrf_token?: string }).csrf_token;
+  const response = await fetch(
+    "/api/method/beveren_fsm.field_service_management.api.schedule.assign_visit",
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "X-Frappe-CSRF-Token": csrfToken || "",
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        name: params.name,
+        scheduled_start_datetime: params.scheduled_start_datetime,
+        scheduled_finish_datetime: params.scheduled_finish_datetime,
+        service_technician: params.service_technician || null,
+        service_team: params.service_team || null,
+      }),
+    }
+  );
+  if (!response.ok) {
+    throw new Error(readFrappeError(await response.text()));
+  }
+  const json = await response.json();
+  return json.message as string;
+}
+
+export async function updateAppointmentStatus(
+  name: string,
+  changedStatus: "Dispatched" | "Cancelled"
+): Promise<string> {
+  const csrfToken = (window as unknown as { csrf_token?: string }).csrf_token;
+  const appointment = await fetchAppointment(name);
+  const response = await fetch(
+    "/api/method/beveren_fsm.field_service_management.api.schedule.update_appointment_from_api",
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "X-Frappe-CSRF-Token": csrfToken || "",
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        name,
+        scheduled_start_datetime: appointment.scheduled_start_datetime,
+        scheduled_finish_datetime: appointment.scheduled_finish_datetime,
+        service_technicians: appointment.service_technicians || [],
+        items: (appointment as Appointment & { items?: unknown[] }).items || [],
+        changed_status: changedStatus,
+        reschedule: false,
+        edit_item_list: false,
+        edit_technician_list: false,
+      }),
+    }
+  );
+  if (!response.ok) {
+    throw new Error(readFrappeError(await response.text()));
+  }
+  const json = await response.json();
+  return json.message as string;
+}
+
+export async function fetchBoardOptions(doctype: string, fields: string[]): Promise<Array<Record<string, string>>> {
+  const csrfToken = (window as unknown as { csrf_token?: string }).csrf_token;
+  const params = new URLSearchParams({
+    fields: JSON.stringify(fields),
+    limit_page_length: "0",
+    order_by: "modified desc",
+  });
+  const response = await fetch(`/api/resource/${encodeURIComponent(doctype)}?${params.toString()}`, {
+    headers: {
+      Accept: "application/json",
+      "X-Frappe-CSRF-Token": csrfToken || "",
+    },
+    credentials: "include",
+  });
+  if (!response.ok) return [];
+  const json = await response.json();
+  return json.data || [];
 }

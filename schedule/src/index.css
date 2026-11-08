@@ -62,10 +62,48 @@
   display: none;
 }
 
-/* Timeline custom style overrides */
-.rct-items .rct-item {
-  transition: all 0.2s ease-in-out;
-  border-radius: 6px;
+/* Dispatch board timeline */
+.dispatch-timeline .react-calendar-timeline {
+  background: hsl(var(--background));
+}
+.dispatch-timeline .rct-header-root,
+.dispatch-timeline .rct-sidebar,
+.dispatch-timeline .rct-calendar-header {
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  border-color: hsl(var(--border));
+}
+.dispatch-timeline .rct-sidebar-row,
+.dispatch-timeline .rct-hl-even,
+.dispatch-timeline .rct-hl-odd {
+  background: transparent;
+  border-bottom: 1px solid hsl(var(--border));
+}
+.dispatch-timeline .rct-horizontal-lines .rct-hl-even {
+  background: hsl(var(--muted) / 0.35);
+}
+.dispatch-timeline .rct-vertical-lines .rct-vl {
+  border-left: 1px solid hsl(var(--border) / 0.7);
+}
+.dispatch-timeline .rct-item.visit-block {
+  overflow: hidden;
+}
+.dispatch-timeline .rct-item.blocked-time {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 6px,
+    hsl(var(--muted-foreground) / 0.16) 6px,
+    hsl(var(--muted-foreground) / 0.16) 12px
+  ) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  z-index: 1 !important;
+  pointer-events: none !important;
+  cursor: not-allowed;
+}
+.dispatch-timeline .rct-item.visit-block {
+  z-index: 5;
 }
 
 /* Bounce from top animation */

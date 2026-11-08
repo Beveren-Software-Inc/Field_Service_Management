@@ -2,7 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon-32x32.webp" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/beveren_fsm/images/beveren-favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/beveren_fsm/images/beveren-apple-touch.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Beveren - Scheduling</title>
     <script>
@@ -25,6 +26,9 @@
     <div id="root"></div>
 		<script>window.csrf_token = '{{ csrf_token }}';
       if (!window.frappe) window.frappe = {};
+      window.frappe.boot = window.frappe.boot || {};
+      window.frappe.boot.sysdefaults = window.frappe.boot.sysdefaults || {};
+      window.frappe.boot.sysdefaults.time_zone = {{ time_zone_json or '"UTC"' }};
 
       window.app_name = "{{ app_name }}";
 

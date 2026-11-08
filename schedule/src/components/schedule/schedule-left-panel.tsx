@@ -33,8 +33,8 @@ const STATUS_OPTIONS: AppointmentStatus[] = [
   "Closed",
 ];
 
-const getStatusColor = (status: AppointmentStatus): string => {
-  const colors: Record<AppointmentStatus, string> = {
+const getStatusColor = (status: string): string => {
+  const colors: Record<string, string> = {
     Open: "bg-blue-100 text-blue-800 border-blue-300",
     Quotation: "bg-indigo-100 text-indigo-800 border-indigo-300",
     Converted: "bg-emerald-100 text-emerald-800 border-emerald-300",
@@ -42,8 +42,12 @@ const getStatusColor = (status: AppointmentStatus): string => {
     Overdue: "bg-red-100 text-red-800 border-red-300",
     "On Hold": "bg-gray-200 text-gray-800 border-gray-300",
     Closed: "bg-slate-100 text-slate-800 border-slate-300",
+    Unassigned: "bg-slate-100 text-slate-800 border-slate-300",
     Scheduled: "bg-blue-100 text-blue-800 border-blue-300",
     Dispatched: "bg-purple-100 text-purple-800 border-purple-300",
+    "En route": "bg-amber-100 text-amber-800 border-amber-300",
+    "On site": "bg-orange-100 text-orange-800 border-orange-300",
+    Paused: "bg-zinc-100 text-zinc-800 border-zinc-300",
     "In Progress": "bg-orange-100 text-orange-800 border-orange-300",
     Completed: "bg-green-100 text-green-800 border-green-300",
     Cancelled: "bg-gray-100 text-gray-800 border-gray-300",

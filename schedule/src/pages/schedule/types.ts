@@ -2,13 +2,15 @@ export interface Appointment {
   name: string;
   service_order?: string;
   customer?: string;
-  status: "Open" | "Scheduled" | "Dispatched" | "In Progress" | "Completed" | "Cancelled";
+  customer_name?: string;
+  status: string;
   scheduled_start_datetime: string;
   scheduled_finish_datetime: string;
   posting_date: string;
   service_technicians?: Array<{
     service_technician: string;
     full_name: string;
+    is_primary?: number | boolean;
   }>;
   service_type?: string;
   description?: string;
@@ -16,8 +18,39 @@ export interface Appointment {
     lat: number;
     lng: number;
     service_area?: string;
-  };
-  service_area?: string;
+  } | null;
+  service_area?: string | null;
+  arrival_window_start?: string | null;
+  arrival_window_end?: string | null;
+  primary_technician?: string | null;
+  service_team?: string | null;
+  address_display?: string | null;
+}
+
+export interface BoardBlock {
+  start: string;
+  end: string;
+}
+
+export interface BoardVisit extends Appointment {
+  customer_name?: string;
+}
+
+export interface BoardTechnician {
+  name: string;
+  full_name: string;
+  color?: string | null;
+  service_area?: string | null;
+  skills?: string[];
+  shifts?: BoardBlock[];
+  leaves?: BoardBlock[];
+}
+
+export interface BoardPayload {
+  time_zone: string;
+  visits: BoardVisit[];
+  unassigned: BoardVisit[];
+  technicians: BoardTechnician[];
 }
 
 export interface Technician {
@@ -28,7 +61,7 @@ export interface Technician {
   specialization?: string;
 }
 
-export type ViewType = "gantt" | "grid" | "maps" | "calendar";
+export type ViewType = "board" | "maps";
 
 export type AppointmentStatus =
   | "Open"

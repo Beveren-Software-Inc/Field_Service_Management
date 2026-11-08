@@ -9,6 +9,7 @@
   "naming_series",
   "service_order",
   "service_type",
+  "amc_contract",
   "column_break_coqg",
   "posting_date",
   "status",
@@ -17,14 +18,22 @@
   "scheduled_time_column",
   "scheduled_start_datetime",
   "scheduled_finish_datetime",
+  "arrival_window_start",
+  "arrival_window_end",
   "column_break_bczc",
   "actual_start_datetime",
   "actual_finish_datetime",
+  "travel_minutes",
   "description_section",
   "description",
   "service_details_tab",
   "service_team_section",
+  "service_team",
+  "primary_technician",
   "service_technicians",
+  "service_location_section",
+  "service_address",
+  "geolocation",
   "services_section",
   "items",
   "amended_from",
@@ -37,7 +46,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "fetch_from": "name1.customer",
+   "fetch_from": "service_order.customer",
    "fieldname": "customer",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -81,6 +90,65 @@
    "reqd": 1
   },
   {
+   "allow_on_submit": 1,
+   "fieldname": "arrival_window_start",
+   "fieldtype": "Datetime",
+   "label": "Arrival Window Start"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "arrival_window_end",
+   "fieldtype": "Datetime",
+   "label": "Arrival Window End"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "travel_minutes",
+   "fieldtype": "Int",
+   "label": "Travel Minutes",
+   "non_negative": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "service_team",
+   "fieldtype": "Link",
+   "label": "Service Team",
+   "options": "Service Team"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "primary_technician",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Primary Technician",
+   "options": "Service Technician"
+  },
+  {
+   "fieldname": "service_location_section",
+   "fieldtype": "Section Break",
+   "label": "Service Location"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "service_address",
+   "fieldtype": "Link",
+   "label": "Service Address",
+   "options": "Address"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "geolocation",
+   "fieldtype": "Geolocation",
+   "label": "Geolocation"
+  },
+  {
+   "fieldname": "amc_contract",
+   "fieldtype": "Link",
+   "label": "AMC Contract",
+   "options": "AMC Contract"
+  },
+  {
    "depends_on": "eval:doc.actual_start_datetime",
    "fieldname": "column_break_bczc",
    "fieldtype": "Column Break",
@@ -101,7 +169,7 @@
    "in_standard_filter": 1,
    "label": "Status",
    "no_copy": 1,
-   "options": "Open\nScheduled\nDispatched\nIn Progress\nCompleted\nCancelled",
+   "options": "Unassigned\nScheduled\nDispatched\nEn route\nOn site\nPaused\nCompleted\nCancelled",
    "read_only": 1
   },
   {
@@ -121,8 +189,7 @@
    "fieldname": "service_technicians",
    "fieldtype": "Table",
    "label": "Service Technicians",
-   "options": "Service Technician Item",
-   "reqd": 1
+   "options": "Service Technician Item"
   },
   {
    "fieldname": "amended_from",
@@ -212,7 +279,7 @@
    "link_fieldname": "custom_reference_service_document"
   }
  ],
- "modified": "2025-11-02 05:09:07.178919",
+ "modified": "2026-11-07 22:30:00.000000",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Service Appointment",
@@ -230,6 +297,36 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Dispatcher",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Service Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
   }
  ],
  "row_format": "Dynamic",
@@ -237,8 +334,8 @@
  "sort_order": "DESC",
  "states": [
   {
-   "color": "Blue",
-   "title": "Open"
+   "color": "Gray",
+   "title": "Unassigned"
   },
   {
    "color": "Blue",
@@ -249,12 +346,24 @@
    "title": "Dispatched"
   },
   {
+   "color": "Yellow",
+   "title": "En route"
+  },
+  {
    "color": "Orange",
-   "title": "In Progress"
+   "title": "On site"
+  },
+  {
+   "color": "Gray",
+   "title": "Paused"
   },
   {
    "color": "Green",
    "title": "Completed"
+  },
+  {
+   "color": "Red",
+   "title": "Cancelled"
   }
  ]
 }

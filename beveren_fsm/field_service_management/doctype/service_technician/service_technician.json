@@ -7,10 +7,15 @@
  "engine": "InnoDB",
  "field_order": [
   "full_name",
+  "active",
   "service_area",
+  "color",
   "column_break_jvsh",
   "employee",
-  "specialization"
+  "specialization",
+  "home_base",
+  "skills_section",
+  "skills"
  ],
  "fields": [
   {
@@ -44,11 +49,40 @@
    "fieldtype": "Link",
    "label": "Specialization",
    "options": "Service Specialization"
+  },
+  {
+   "default": "1",
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Active"
+  },
+  {
+   "fieldname": "color",
+   "fieldtype": "Color",
+   "label": "Color"
+  },
+  {
+   "fieldname": "home_base",
+   "fieldtype": "Geolocation",
+   "label": "Home Base"
+  },
+  {
+   "fieldname": "skills_section",
+   "fieldtype": "Section Break",
+   "label": "Skills"
+  },
+  {
+   "fieldname": "skills",
+   "fieldtype": "Table",
+   "label": "Skills",
+   "options": "Service Technician Skill Item"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-03-05 03:42:59.542678",
+ "modified": "2026-11-07 22:30:00.000000",
  "modified_by": "Administrator",
  "module": "Field Service Management",
  "name": "Service Technician",
@@ -64,6 +98,30 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Dispatcher",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Service Manager",
    "share": 1,
    "write": 1
   }
