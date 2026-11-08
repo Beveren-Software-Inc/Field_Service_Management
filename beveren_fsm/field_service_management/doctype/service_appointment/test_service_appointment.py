@@ -100,9 +100,7 @@ class TestServiceAppointment(FrappeTestCase):
 
 			local = datetime(2026, 11, 10, 9, 0, tzinfo=ZoneInfo("America/Toronto"))
 			utc_start = local.astimezone(ZoneInfo("UTC")).strftime("%Y-%m-%dT%H:%M:%SZ")
-			utc_end = (
-				local.replace(hour=10).astimezone(ZoneInfo("UTC")).strftime("%Y-%m-%dT%H:%M:%SZ")
-			)
+			utc_end = local.replace(hour=10).astimezone(ZoneInfo("UTC")).strftime("%Y-%m-%dT%H:%M:%SZ")
 			self.assertIn(doc.name, _ids(get_board(utc_start, utc_end)))
 			self.assertNotIn(
 				doc.name,

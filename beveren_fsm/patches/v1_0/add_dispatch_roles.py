@@ -2,7 +2,6 @@
 
 import frappe
 
-
 ROLES = (
 	{"role_name": "Dispatcher", "desk_access": 1},
 	{"role_name": "CSR", "desk_access": 1},

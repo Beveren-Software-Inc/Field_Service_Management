@@ -35,6 +35,7 @@ def has_app_permission():
 	"""Show Field Service to anyone who can open the desk."""
 	return True
 
+
 fixtures = [
 	# Export your custom "Service Type" doctype
 	"Service Type",
