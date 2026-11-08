@@ -4,6 +4,8 @@ app_publisher = "Beveren Software"
 app_description = "Beveren Software's Field Service Management App"
 app_email = "info@beverensoftware.com"
 app_license = "mit"
+app_logo_url = "/assets/beveren_fsm/images/fsm-logo.png"
+app_home = "/desk/service"
 
 # Apps
 # ------------------
@@ -13,18 +15,25 @@ app_license = "mit"
 # all of which are ERPNext doctypes that don't exist on a bare Frappe site.
 required_apps = ["erpnext"]
 
-# Each item in the list will be shown as an app in the apps page.
-# Note: there is no beveren_fsm.api.permission module/has_app_permission
-# function in this app, so has_permission is omitted rather than pointing
-# at something that doesn't exist.
+# The apps screen only lists apps that declare this. ERPNext is sequence 1 and Framework is
+# 1000, so Field Service sits beside ERPNext. Opening it lands on the Service workspace.
 add_to_apps_screen = [
 	{
-		"name": "beveren_fsm",
-		"logo": "/assets/beveren_fsm/schedule/favicon-32x32.webp",
-		"title": "Field Service Management",
-		"route": "/desk/service",
+		"name": app_name,
+		"logo": app_logo_url,
+		"title": "Field Service",
+		"route": app_home,
+		"has_permission": "beveren_fsm.hooks.has_app_permission",
+		"sequence_id": 2,
 	}
 ]
+
+app_include_icons = ["/assets/beveren_fsm/icons/fsm.svg"]
+
+
+def has_app_permission():
+	"""Show Field Service to anyone who can open the desk."""
+	return True
 
 fixtures = [
 	# Export your custom "Service Type" doctype
@@ -322,4 +331,9 @@ scheduler_events = {
 website_route_rules = [
 	{"from_route": "/schedule", "to_route": "schedule"},
 	{"from_route": "/schedule/<path:app_path>", "to_route": "schedule"},
+]
+
+# Browsers request /favicon.ico even when the page names another icon. Send them the mark.
+website_redirects = [
+	{"source": "/favicon.ico", "target": "/assets/beveren_fsm/images/beveren-favicon.png"},
 ]

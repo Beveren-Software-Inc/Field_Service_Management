@@ -1,0 +1,23 @@
+{
+ "app": "beveren_fsm",
+ "creation": "2026-11-07 22:10:00",
+ "docstatus": 0,
+ "doctype": "Dock",
+ "idx": 0,
+ "items": [
+  {
+   "added": 1,
+   "hidden": 0,
+   "icon": "wrench-soft",
+   "link_to": "Field Service Management",
+   "link_type": "Sidebar",
+   "title": "Field Service"
+  }
+ ],
+ "modified": "2026-11-07 22:10:00",
+ "modified_by": "Administrator",
+ "name": "beveren_fsm",
+ "owner": "Administrator",
+ "standard": 1,
+ "user": ""
+}
