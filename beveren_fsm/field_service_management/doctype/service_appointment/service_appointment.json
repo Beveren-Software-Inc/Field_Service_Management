@@ -46,7 +46,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "fetch_from": "name1.customer",
+   "fetch_from": "service_order.customer",
    "fieldname": "customer",
    "fieldtype": "Link",
    "in_list_view": 1,

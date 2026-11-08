@@ -1,13 +1,28 @@
-import json
-
 import frappe
+from frappe.utils import flt
 
 
 @frappe.whitelist()
 def create_service_invoice(doctype, docname, customer, items=None):
-	items = json.loads(items) if items else []
+	items = frappe.parse_json(items) if items else []
+	source = frappe.get_doc(doctype, docname)
+	company = source.get("company")
+	if not company and source.get("service_order"):
+		company = frappe.db.get_value("Service Order", source.service_order, "company")
+
 	invoice = frappe.new_doc("Sales Invoice")
 	invoice.customer = customer
+	if company:
+		invoice.company = company
+	currency = source.get("currency")
+	if not currency and company:
+		currency = frappe.db.get_value("Company", company, "default_currency")
+	if currency:
+		invoice.currency = currency
+	if source.get("selling_price_list"):
+		invoice.selling_price_list = source.selling_price_list
+	if source.get("conversion_rate"):
+		invoice.conversion_rate = source.conversion_rate
 	invoice.due_date = frappe.utils.nowdate()
 	invoice.custom_reference_service_doctype = doctype
 	invoice.custom_reference_service_document = docname
@@ -15,58 +30,54 @@ def create_service_invoice(doctype, docname, customer, items=None):
 		invoice.append(
 			"items",
 			{
-				"item_code": item["item_code"],
-				"qty": item["qty"],
-				"rate": item["rate"],
-				"amount": item["amount"],
+				"item_code": item.get("item_code"),
+				"qty": item.get("qty"),
+				"rate": item.get("rate"),
+				"amount": item.get("amount"),
 			},
 		)
 	invoice.insert()
 	return invoice.name
 
 
+def _apply_invoiced_qty(service_doc, invoice_qty, sign):
+	if not service_doc.meta.get_field("items"):
+		return False
+
+	updated = False
+	for row in service_doc.items:
+		if row.item_code not in invoice_qty:
+			continue
+		row.invoiced_qty = max(0, flt(row.invoiced_qty) + (sign * flt(invoice_qty[row.item_code])))
+		if row.invoiced_qty <= 0:
+			row.invoiced_qty = 0
+			row.invoice_status = "Not Invoiced"
+		elif flt(row.invoiced_qty) < flt(row.qty):
+			row.invoice_status = "Partly Invoiced"
+		else:
+			row.invoice_status = "Invoiced"
+		updated = True
+	return updated
+
+
 def update_invoice_status(doc, method):
 	if not (doc.custom_reference_service_doctype and doc.custom_reference_service_document):
 		return
 
-	new_status = "Invoiced" or "Partly Invoiced" if method == "on_submit" else "Not Invoiced"
+	sign = 1 if method == "on_submit" else -1
+	invoice_qty = {}
+	for item in doc.items:
+		if not item.item_code:
+			continue
+		invoice_qty[item.item_code] = invoice_qty.get(item.item_code, 0) + flt(item.qty)
 
-	# Retrieve all item codes from the Sales Invoice
-	invoice_item_codes = {
-		item["item_code"]: item["qty"]
-		for item in frappe.get_all(
-			"Sales Invoice Item", filters={"parent": doc.name}, fields=["item_code", "qty"]
-		)
-	}
-
-	# Load the referenced service document
-	ref_doctype = doc.custom_reference_service_doctype
-	ref_docname = doc.custom_reference_service_document
-	service_doc = frappe.get_doc(ref_doctype, ref_docname)
-
-	updated = False
-	child_tables = ["items"]  # Extend this list if there are more child tables to update (Services, Parts)
-	for table in child_tables:
-		if not hasattr(service_doc, table):
-			frappe.throw(f"No '{table}' child table found in {ref_doctype}")
-
-		for row in getattr(service_doc, table):
-			invoiced_qty = invoice_item_codes[row.item_code]
-			if row.item_code in invoice_item_codes.keys():
-				row.invoiced_qty += invoiced_qty
-				if row.invoice_status != new_status:
-					if row.qty > invoiced_qty > 0:
-						row.invoice_status = "Partly Invoiced"
-					if row.qty == invoiced_qty:
-						row.invoice_status = "Invoiced"
-
-					updated = True
-
-	if updated:
-		service_doc.save()
+	service_doc = frappe.get_doc(doc.custom_reference_service_doctype, doc.custom_reference_service_document)
+	if _apply_invoiced_qty(service_doc, invoice_qty, sign):
+		service_doc.flags.ignore_validate_update_after_submit = True
+		service_doc.save(ignore_permissions=True)
 		frappe.msgprint(
 			f"Updated invoice status for <strong>Services and Parts</strong> in "
-			f"<strong>{ref_doctype}</strong> {ref_docname}"
+			f"<strong>{service_doc.doctype}</strong> {service_doc.name}"
 		)
 
 	update_associated_docs_invoice_status(doc, method)
@@ -121,7 +132,8 @@ def update_target_documents(target_doctype, target_docname, source_items):
 			updated = True
 
 	if updated:
-		target_doc.save()
+		target_doc.flags.ignore_validate_update_after_submit = True
+		target_doc.save(ignore_permissions=True)
 		frappe.msgprint(
 			f"Updated invoice status for <strong>Services and Parts</strong> in "
 			f"<strong>{target_doctype}</strong> {target_docname}"
@@ -132,7 +144,7 @@ def update_per_billed_status(doc, method):
 	total_amount = 0.0
 	billed_amount = 0.0
 
-	if not (doc.custom_reference_service_doctype or doc.custom_reference_service_document):
+	if not (doc.custom_reference_service_doctype and doc.custom_reference_service_document):
 		return
 
 	ref_doc = frappe.get_doc(doc.custom_reference_service_doctype, doc.custom_reference_service_document)
@@ -148,7 +160,8 @@ def update_per_billed_status(doc, method):
 		billed_amount += full_amount * proportion_invoiced
 
 	ref_doc.per_billed = (billed_amount / total_amount) * 100 if total_amount else 0.0
-	ref_doc.save()
+	ref_doc.flags.ignore_validate_update_after_submit = True
+	ref_doc.save(ignore_permissions=True)
 
 
 @frappe.whitelist()
