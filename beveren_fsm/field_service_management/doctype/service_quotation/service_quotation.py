@@ -74,5 +74,11 @@ def make_service_quotation(source_name, target_doc=None, selected_items=None):
 			},
 		}
 	}
-	doc = get_mapped_doc("Service Request", source_name, mapping, target_doc)
-	return doc
+	def postprocess(source, target):
+		from beveren_fsm.field_service_management.selling import prepare_mapped_selling_doc
+
+		prepare_mapped_selling_doc(target, source, "party_name", "service_address")
+
+	return get_mapped_doc(
+		"Service Request", source_name, mapping, target_doc, postprocess=postprocess
+	)

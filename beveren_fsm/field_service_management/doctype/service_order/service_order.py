@@ -1153,6 +1153,12 @@ def update_product_movement_on_submit(doc, method):
 			service_request.save(ignore_permissions=True)
 
 
+def _prepare_order_from_source(source, target):
+	from beveren_fsm.field_service_management.selling import prepare_mapped_selling_doc
+
+	prepare_mapped_selling_doc(target, source, "customer", "customer_address")
+
+
 @frappe.whitelist()
 def make_order_from_request(source_name, target_doc=None, selected_items=None):
 	mapping = {
@@ -1176,8 +1182,13 @@ def make_order_from_request(source_name, target_doc=None, selected_items=None):
 			},
 		}
 	}
-	doc = get_mapped_doc("Service Request", source_name, mapping, target_doc)
-	return doc
+	return get_mapped_doc(
+		"Service Request",
+		source_name,
+		mapping,
+		target_doc,
+		postprocess=_prepare_order_from_source,
+	)
 
 
 @frappe.whitelist()
@@ -1215,5 +1226,10 @@ def make_order_from_quote(source_name, target_doc=None, selected_items=None):
 			"add_if_empty": True,
 		},
 	}
-	doc = get_mapped_doc("Service Quotation", source_name, mapping, target_doc)
-	return doc
+	return get_mapped_doc(
+		"Service Quotation",
+		source_name,
+		mapping,
+		target_doc,
+		postprocess=_prepare_order_from_source,
+	)

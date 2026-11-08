@@ -282,7 +282,11 @@ scheduler_events = {
 
 # Request Events
 # ----------------
-# before_request = ["beveren_fsm.utils.before_request"]
+# Service Order and Service Quotation call ERPNext's pricing engine. Register
+# them before each request so a reloaded worker still accepts the doctype.
+before_request = [
+	"beveren_fsm.field_service_management.selling.register_service_pricing_doctypes"
+]
 # after_request = ["beveren_fsm.utils.after_request"]
 
 # Job Events
