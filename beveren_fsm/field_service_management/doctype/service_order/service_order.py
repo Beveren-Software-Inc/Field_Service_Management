@@ -136,10 +136,12 @@ class ServiceOrder(Document):
 	def set_in_words(self):
 		from frappe.utils import money_in_words
 
-		self.in_words = money_in_words(self.grand_total, self.currency)
-		self.base_in_words = money_in_words(
-			self.base_grand_total, frappe.get_cached_value("Company", self.company, "default_currency")
+		# A request has no totals, so an order mapped from it starts with null amounts.
+		company_currency = (
+			frappe.get_cached_value("Company", self.company, "default_currency") if self.company else None
 		)
+		self.in_words = money_in_words(flt(self.grand_total), self.currency)
+		self.base_in_words = money_in_words(flt(self.base_grand_total), company_currency or self.currency)
 
 	def calculate_service_totals(self):
 		service_total = 0.0
@@ -158,6 +160,16 @@ class ServiceOrder(Document):
 
 		self.service_total = service_total
 		self.spareparts_total = spareparts_total
+
+		# The desk does not run ERPNext's tax controller, so roll the lines up here.
+		total = service_total + spareparts_total
+		conversion = flt(self.get("conversion_rate")) or 1
+		self.total = total
+		self.net_total = total
+		self.grand_total = total
+		self.base_total = total * conversion
+		self.base_net_total = self.base_total
+		self.base_grand_total = self.base_total
 
 	def check_amc_budget(self):
 		self.is_over_budget = 0
@@ -1146,6 +1158,7 @@ def make_order_from_request(source_name, target_doc=None, selected_items=None):
 	mapping = {
 		"Service Request": {
 			"doctype": "Service Order",
+			"field_no_map": ["naming_series", "status", "amended_from"],
 			"field_map": {
 				"name": "service_request",
 				"customer": "customer",
@@ -1172,6 +1185,7 @@ def make_order_from_quote(source_name, target_doc=None, selected_items=None):
 	mapping = {
 		"Service Quotation": {
 			"doctype": "Service Order",
+			"field_no_map": ["naming_series", "status", "amended_from"],
 			"field_map": {
 				"name": "service_quotation",
 				"party_name": "customer",

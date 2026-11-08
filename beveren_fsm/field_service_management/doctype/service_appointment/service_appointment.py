@@ -207,9 +207,16 @@ class ServiceAppointment(Document):
 			"Completed": "Review",
 		}
 
-		if self.status in status_mapping:
-			order.status = status_mapping[self.status]
-			order.save()
+		new_status = status_mapping.get(self.status)
+		if not new_status or order.status == new_status:
+			return
+		# Completing the order is an explicit dispatcher action. A later visit
+		# save (invoice status, reschedule) must not push it back to Review.
+		if order.status == "Completed":
+			return
+		order.status = new_status
+		order.flags.ignore_validate_update_after_submit = True
+		order.save(ignore_permissions=True)
 
 	def cancel_linked_order(self):
 		if not self.service_order:
@@ -225,21 +232,12 @@ def make_appointment_from_order(source_name, target_doc=None, selected_items=Non
 	mapping = {
 		"Service Order": {
 			"doctype": "Service Appointment",
+			# service_order and customer copy on their own (link + same field name).
+			# Do not reuse the order series or its Open status on the visit.
+			"field_no_map": ["naming_series", "status", "amended_from"],
 			"field_map": {
-				"name": "service_quotation",
-				"party_name": "customer",
-				"company": "company",
 				"type": "service_type",
-				"priority": "priority",
-				"due_date": "due_date",
-				"service_address": "customer_address",
-				"cost_center": "cost_center",
-				"project": "project",
-				"currency": "currency",
-				"serial_no": "serial_no",
-				"preferred_date_1": "preferred_date_1",
-				"preferred_time": "preferred_time",
-				"preference_note": "preference_note",
+				"customer_address": "service_address",
 			},
 		},
 		"Service Order Item": {
